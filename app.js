@@ -20,6 +20,8 @@ app.use(session({
 //serve static html files (login and sign up)
 app.use(express.static(path.join(__dirname, "views")));
 
+app.use(express.static(path.join(__dirname, "public")));
+
 //MySQL connection
 const db = mysql.createConnection({
     host: 'localhost',
