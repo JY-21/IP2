@@ -30,6 +30,43 @@
             <h1>Current Tasks:</h1>
         </main>
 
+        <!--Task Modal-->
+        <div id="taskModal" class="modal">
+            <div class="modal-content">
+                <span class = "close-btn" onClick="closeModal()">&times;</span>
+                <h2 id="modalTitle">Add Task</h2>
+                    <form id="taskForm">
+                        <input type="hidden" id="taskId">
+                        
+                        <label for="taskTitle">Task Name:</label>
+                        <input type="text" id="taskTitle" required>
+                        
+                        <label for="taskLocation">Location:</label>
+                        <input type="text" id="taskLocation">
+                        
+                        <label for="taskDuration">Duration (hrs):</label>
+                        <input type="number" step="0.5" id="taskDuration" min="0">
+                        
+                        <label for="taskDate">Date:</label>
+                        <input type="date" id="taskDate">
+
+                        <label for="taskPriority">Priority:</label>
+                        <select id="taskPriority">
+                            <option>Low</option>
+                            <option selected>Medium</option>
+                            <option>High</option>
+                        </select>
+                        
+                        <label>
+                            <input type="checkbox" id="taskComplete"> Mark Complete
+                        </label>
+
+                        <button type="submit">Save Task</button>
+                    </form>
+
+            </div>
+        </div>
+
         <script src="/scripts.js"></script>
     </body>
 </html>

@@ -78,13 +78,59 @@ app.post("/login", (req, res) => {
     const user = results[0];
     if (bcrypt.compareSync(password, user.password)) {
       req.session.user = user;
-      res.redirect("/"); // redirect to homepage
+      res.redirect("/home"); // redirect to homepage
     } else {
       res.send("Incorrect password!");
     }
   });
 });
 
+app.get('/home', (req, res) => {
+  if(!req.session.user){
+    return res.redirect('/login'); //prevent direct access
+  }
+  res.sendFile(path.join(__dirname, "views", "home.html"));
+});
+
+//add task
+app.post('/tasks', (req, res)=>{
+  if(!req.session.user) return res.status(401).send("Unauthorized");
+
+  const { name, location, date, priority } = req.body;
+  db.query(
+    "INSERT INTO tasks (user_id, title, location, duration, date, priority, complete) VALUES (?, ?, ?, ?, ?, ?, 0)", 
+    [req.session.user.id, title, location, duration, date, priority],
+    (err, result) => {
+      if(err) throw err;
+      res.send({ success: true, taskId: result.insertId });
+    }
+  );
+});
+
+//edit task
+app.put('/tasks/:id', (req, res) => {
+    const { title, location, duration, date, priority, complete } = req.body;
+    db.query(
+        "UPDATE tasks SET title=?, location=?, duration=?, date=?, priority=?, complete=? WHERE task_id=? AND user_id=?",
+        [title, location, duration, date, priority, complete || 0, req.params.id, req.session.user.id],
+        (err) => {
+            if (err) throw err;
+            res.send({ success: true });
+        }
+    );
+});
+
+//delete task
+app.delete('/tasks/:id', (req, res) => {
+    db.query(
+        "DELETE FROM tasks WHERE task_id=? AND user_id=?",
+        [req.params.id, req.session.user.id],
+        (err) => {
+            if (err) throw err;
+            res.send({ success: true });
+        }
+    );
+});
 
 //logout
 app.get('/logout', (req, res) => {
