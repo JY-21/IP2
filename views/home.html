@@ -3,9 +3,33 @@
     <head>
         <title>ErRun: Home</title>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+        <link rel="stylesheet" href="styles.css">
     </head>
 
     <body>
-        
+        <!--Side menu-->
+        <aside class="side-menu">
+            <div class="side-container">
+                <ul>
+                    <li><button onClick="newTask()">New Task</button></li>
+                    <li><button onClick="deleteTask()">Delete Task</button></li>
+                    <li><button onClick="editTask()">Edit Task</button></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!--Top header-->
+       <header class="top-header">
+            <button onClick="goToProfile()">
+                <img src="/profilepic.jpg" alt="Profile Picture" class="profile-pic">
+            </button>
+       </header>
+
+        <main class="main-content">
+            <h1>Current Tasks:</h1>
+        </main>
+
+        <script src="/scripts.js"></script>
     </body>
 </html>
