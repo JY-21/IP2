@@ -28,12 +28,29 @@
 
         <main class="main-content">
             <h1>Current Tasks:</h1>
+            <button id="newTaskBtn" class="new-task-btn">+ New Task</button>
+
+            <!--Task list container-->
+            <div id="taskList" class="task-list">
+
+            </div>
         </main>
+
+        <div class="task-bar high">
+            <span class="task-info">
+                <strong>Buy groceries</strong> | Location: Tesco | 1 hr | Due: 10/09/2025
+            </span>
+            <div class="task-actions">
+                <button class="edit-btn">✏️</button>
+                <button class="delete-btn">❌</button>
+                <button class="complete-btn">✔️</button>
+            </div>
+        </div>
 
         <!--Task Modal-->
         <div id="taskModal" class="modal">
             <div class="modal-content">
-                <span class = "close-btn" onClick="closeModal()">&times;</span>
+                <span id = "closeModal" class="close">&times;</span>
                 <h2 id="modalTitle">Add Task</h2>
                     <form id="taskForm">
                         <input type="hidden" id="taskId">
@@ -66,7 +83,6 @@
 
             </div>
         </div>
-
         <script src="/scripts.js"></script>
     </body>
 </html>
