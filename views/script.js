@@ -7,35 +7,6 @@ const task = {
     complete: document.getElementById("taskComplete").checked ? 1:0
 };
 
-const modal = document.getElementById("taskModal");
-const newTaskBtn = document.getElementById("newTaskBtn");
-const closeModal = document.getElementById("closeModal");
-
-//open modal when clicking + new task
-newTaskBtn.addEventListener("click", () => {
-    modal.classList.add("show");
-});
-
-//close modal when clicking X
-closeModal.addEventListener("click", () => {
-    modal.classList.remove("show");
-});
-
-//close modal if clicking outside the content
-window.addEventListener("click", (e) => {
-    if(e.target == modal) {
-        modal.classList.remove("show");
-    }
-});
-
-document.getElementById("newTaskBtn").addEventListener("click", () => {
-  document.getElementById("taskModal").classList.remove("hidden");
-});
-
-document.getElementById("closeModal").addEventListener("click", () => {
-  document.getElementById("taskModal").classList.add("hidden");
-});
-
 // Example rendering tasks
 const tasks = [
   {id: 1, title: "Buy Groceries", location: "Tesco", duration: 1, date: "2025-09-02", priority: "High"},
@@ -64,3 +35,26 @@ function renderTasks() {
 }
 
 renderTasks();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("taskModal");
+  const newTaskBtn = document.getElementById("newTaskBtn");
+  const closeModal = document.getElementById("closeModal");
+
+  //open modal
+  newTaskBtn.addEventListener("click", () => {
+    modal.classList.add("show");
+  });
+
+  //close modal
+  closeModal.addEventListener("click", () => {
+    modal.classList.remove("show");
+  });
+
+  //close modal when clicking outside content
+  window.addEventListener("click", (e) =>{
+    if(e.target === modal) {
+      modal.classList.remove("show");
+    }
+  });
+});
