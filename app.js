@@ -89,23 +89,36 @@ app.get('/home', (req, res) => {
   if(!req.session.user){
     return res.redirect('/login'); //prevent direct access
   }
-  res.sendFile(path.join(__dirname, "views", "home.html"));
+
+  const sql = "SELECT * FROM tasks WHERE user_id = ?"; //display tasks
+  db.query(sql, [req.session.user.user_id], (err, results) => {
+    if(err) throw err;
+    //sends tasks as JSON or render then in template
+    res.json(results);
+  });
 });
 
 //add task
-app.post('/tasks', (req, res)=>{
+app.post('/add-task', (req, res)=>{
   if(!req.session.user) return res.status(401).send("Unauthorized");
+  const { title, origin, duration, date, priority } = req.body;
+  let locations = req.body["taskLocations[]"];
 
-  const { name, location, date, priority } = req.body;
+  //if user adds multiple, req.body.locations[] comes as array
+  if(Array.isArray(locations)){
+    locations = locations.join(", ");
+  }
+
   db.query(
-    "INSERT INTO tasks (user_id, title, location, duration, date, priority, complete) VALUES (?, ?, ?, ?, ?, ?, 0)", 
-    [req.session.user.id, title, location, duration, date, priority],
+    "INSERT INTO tasks (user_id, title, origin, location, duration, date, priority, complete) VALUES (?, ?, ?, ?, ?, ?, 0)", 
+    [req.session.user.id, title, taskLocations, duration, date, priority],
     (err, result) => {
       if(err) throw err;
-      res.send({ success: true, taskId: result.insertId });
+      res.redirect("/home");
     }
   );
 });
+
 
 //edit task
 app.put('/tasks/:id', (req, res) => {

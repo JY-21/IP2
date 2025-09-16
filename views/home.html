@@ -7,7 +7,6 @@
         <link rel="stylesheet" href="styles.css">
     </head>
     <script src="script.js"></script>
-
     <body>
         <!--Side menu-->
         <aside class="side-menu">
@@ -37,30 +36,28 @@
             </div>
         </main>
 
-        <div class="task-bar high">
-            <span class="task-info">
-                <strong>Buy groceries</strong> | Location: Tesco | 1 hr | Due: 10/09/2025
-            </span>
-            <div class="task-actions">
-                <button class="edit-btn">✏️</button>
-                <button class="delete-btn">❌</button>
-                <button class="complete-btn">✔️</button>
-            </div>
-        </div>
-
         <!--Task Modal-->
         <div id="taskModal" class="modal">
             <div class="modal-content">
                 <span id = "closeModal" class="close">&times;</span>
                 <h2 id="modalTitle">Add Task</h2>
-                    <form id="taskForm">
+                    <form action="app.js"    id="taskForm">
                         <input type="hidden" id="taskId">
                         
                         <label for="taskTitle">Task Name:</label>
-                        <input type="text" id="taskTitle" required>
+                        <input type="text" id="taskTitle" name="title" required>
+
+                        <label for="taskOrigin">Point of Origin:</label>
+                        <input type="text" id="taskOrigin" placeholder="e.g. Home">
                         
-                        <label for="taskLocation">Location:</label>
-                        <input type="text" id="taskLocation">
+                        <label>Locations:</label>
+                        <div id="locationsContainer">
+                            <div class="location-input">
+                                <input type="text" name="taskLocations[]" placeholder="Enter Location">
+                                <button type="button" class="remove-location">-</button>
+                            </div>
+                        </div>
+                        <button type="button" id="addLocationBtn" class="small-btn">+ Add Location</button>
                         
                         <label for="taskDuration">Duration (hrs):</label>
                         <input type="number" step="0.5" id="taskDuration" min="0">
@@ -75,9 +72,7 @@
                             <option>High</option>
                         </select>
                         
-                        <label>
-                            <input type="checkbox" id="taskComplete"> Mark Complete
-                        </label>
+                        
 
                         <button type="submit">Save Task</button>
                     </form>
