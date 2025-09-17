@@ -86,14 +86,29 @@ app.post("/login", (req, res) => {
 });
 
 app.get('/home', (req, res) => {
-  if(!req.session.user){
+  if (!req.session.user) {
     return res.redirect('/login'); //prevent direct access
   }
 
-  const sql = "SELECT * FROM tasks WHERE user_id = ?"; //display tasks
+  res.sendFile(path.join(__dirname, "views", "home.html"));
+});
+
+//get tasks from database
+app.get('/tasks', (req, res)=>{
+  if(!req.session.user){
+    return res.status(401).json({error: "Unauthorized"});
+  }
+
+  const sql = `
+    SELECT task_id AS id, title, location, duration, date, priority, complete
+    FROM tasks
+    WHERE user_id = ?
+  `;
   db.query(sql, [req.session.user.user_id], (err, results) => {
-    if(err) throw err;
-    //sends tasks as JSON or render then in template
+    if(err){
+      console.error("DB Fetch Error:", err);
+      return res.status(500).json({ error: "Database error"});
+    }
     res.json(results);
   });
 });
@@ -110,8 +125,8 @@ app.post('/add-task', (req, res)=>{
   }
 
   db.query(
-    "INSERT INTO tasks (user_id, title, origin, location, duration, date, priority, complete) VALUES (?, ?, ?, ?, ?, ?, 0)", 
-    [req.session.user.id, title, taskLocations, duration, date, priority],
+    "INSERT INTO tasks (user_id, title, origin, location, duration, date, priority, complete) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+  [req.session.user.user_id, title, origin, locations || "", duration, date, priority, comeplete || 0],
     (err, result) => {
       if(err) throw err;
       res.redirect("/home");

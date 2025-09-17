@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", loadTasks);
     if (e.target.classList.contains("delete-btn")) {
       const idx = tasks.findIndex(t => t.id === id);
       if (idx > -1) tasks.splice(idx, 1);
-      renderTasks();
+      loadTasks();
     } else if (e.target.classList.contains("edit-btn")) {
       const t = tasks.find(t => t.id === id);
       if (!t) return;
