@@ -116,7 +116,7 @@ app.get('/tasks', (req, res)=>{
 //add task
 app.post('/add-task', (req, res)=>{
   if(!req.session.user) return res.status(401).send("Unauthorized");
-  const { title, origin, duration, date, priority } = req.body;
+  const { title, origin, duration, date, priority, complete } = req.body;
   let locations = req.body["taskLocations[]"];
 
   //if user adds multiple, req.body.locations[] comes as array
@@ -126,14 +126,16 @@ app.post('/add-task', (req, res)=>{
 
   db.query(
     "INSERT INTO tasks (user_id, title, origin, location, duration, date, priority, complete) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
-  [req.session.user.user_id, title, origin, locations || "", duration, date, priority, comeplete || 0],
+  [req.session.user.user_id, title, origin, locations || "", duration, date, priority, complete || 0],
     (err, result) => {
-      if(err) throw err;
-      res.redirect("/home");
+      if(err){
+        console.error("DB Insert Error:", err);
+        return res.status(500).json({error: "Error saving task"});
+      }
+      res.json({ success: true, taskId: result.insertId});
     }
   );
 });
-
 
 //edit task
 app.put('/tasks/:id', (req, res) => {

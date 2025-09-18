@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", loadTasks);
     const data = Object.fromEntries(formData.entries());
 
     //if multiple locations[]
-    data.locations = formData.getAll("taskLocations[]").join(", ");
+     data["taskLocations[]"] = formData.getAll("taskLocations[]");
 
     try{
       await fetch("/add-task", {
