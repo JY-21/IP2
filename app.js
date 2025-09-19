@@ -100,7 +100,7 @@ app.get('/tasks', (req, res)=>{
   }
 
   const sql = `
-    SELECT task_id AS id, title, location, duration, date, priority, complete
+    SELECT task_id AS id, title, origin, location, duration, date, priority, complete
     FROM tasks
     WHERE user_id = ?
   `;
@@ -139,10 +139,10 @@ app.post('/add-task', (req, res)=>{
 
 //edit task
 app.put('/tasks/:id', (req, res) => {
-    const { title, location, duration, date, priority, complete } = req.body;
+    const { title, origin, location, duration, date, priority, complete } = req.body;
     db.query(
-        "UPDATE tasks SET title=?, location=?, duration=?, date=?, priority=?, complete=? WHERE task_id=? AND user_id=?",
-        [title, location, duration, date, priority, complete || 0, req.params.id, req.session.user.id],
+        "UPDATE tasks SET title=?, origin=?, location=?, duration=?, date=?, priority=?, complete=? WHERE task_id=? AND user_id=?",
+        [title, origin, location, duration, date, priority, complete || 0, req.params.id, req.session.user.id],
         (err) => {
             if (err) throw err;
             res.send({ success: true });

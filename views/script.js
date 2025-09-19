@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
         div.innerHTML = `
           <div class="task-info">
             <strong>${escapeHtml(t.title)}</strong>
-            <div class="meta">${escapeHtml(t.location)} • ${t.duration} hr • Due: ${t.date}</div>
+            <div class="meta">Location: ${escapeHtml(t.location)} <br> Origin: ${escapeHtml(t.origin)} <br> Duration: ${t.duration} hour <br> Due: ${t.date} <br> Priority: ${t.priority}</div>
           </div>
           <div class="task-actions">
             <button class="edit-btn" data-id="${t.id}" title="Edit">✏️</button>
