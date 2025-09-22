@@ -14,18 +14,63 @@ document.addEventListener("DOMContentLoaded", () => {
   const addLocationBtn = document.getElementById("addLocationBtn");
   const taskList = document.getElementById("taskList");
   const taskForm = document.getElementById("taskForm");
+  const deleteModal = document.getElementById("deleteModal");
+  const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+  const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+  let taskToDelete = null;
 
   if (!modal || !newTaskBtn || !closeModal || !taskList || !taskForm) {
     console.error("Missing required DOM elements. Check your HTML ids.");
     return;
   }
 
+  //open delete modal when clickin X
+  taskList.addEventListener("click", (e) => {
+    const id = parseInt(e.target.dataset.id);
+    if(e.target.classList.contains("delete-btn")){
+      taskToDelete = id;
+      deleteModal.classList.add("show");
+    }
+  });
+
+  //cancel delete
+  cancelDeleteBtn.addEventListener("click", () => {
+    deleteModal.classList.remove("show");
+    taskToDelete = null;
+  });
+
+  //confirm delete
+  confirmDeleteBtn.addEventListener("click", async () => {
+    if(!taskToDelete) return;
+
+    try{
+      const res = await fetch(`/tasks/${taskToDelete}`, { method: "DELETE" });
+      if(!res.ok) throw new Error("Failed to delete task");
+
+      //animate task removal
+      const taskDiv = document.querySelector(`.delete-btn[data-id="${taskToDelete}"]`).closest(".task-bar");
+      if(taskDiv){
+        taskDiv.classList.add("fade-out"); //animation
+        taskDiv.addEventListener("transitionend", () => taskDiv.remove(), { once: true });//remove after animation
+      }
+
+      deleteModal.classList.remove("show");
+      taskToDelete = null;
+
+    } catch (err) {
+      console.error("Error deleting task: ", err);
+    }
+  });
+
   // RENDER TASKS
+  let currentTasks = []; //store tasks from DB
+
   async function loadTasks() {
 
     try{
       const res = await fetch("/tasks");
       const tasks = await res.json();
+      currentTasks = tasks;//store globally
 
       const taskList = document.getElementById("taskList");
 
@@ -73,29 +118,6 @@ document.addEventListener("DOMContentLoaded", loadTasks);
 
   closeModal.addEventListener("click", () => modal.classList.remove("show"));
   window.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
-
-  //handle task form submission
-  document.getElementById("taskForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-
-    //if multiple locations[]
-     data["taskLocations[]"] = formData.getAll("taskLocations[]");
-
-    try{
-      await fetch("/add-task", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      document.getElementById("taskModal").classList.remove("show");
-      loadTasks();
-    } catch (err) {
-      console.error("Error adding tasks:", err);
-    }
-  });
   
   // ADD/REMOVE LOCATION INPUTS (delegated)
   addLocationBtn.addEventListener("click", () => {
@@ -113,53 +135,59 @@ document.addEventListener("DOMContentLoaded", loadTasks);
   });
 
   // FORM SUBMIT: collect fields, push to tasks array and re-render
-  taskForm.addEventListener("submit", (e) => {
-    e.preventDefault();
+ taskForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    const idVal = document.getElementById("taskId").value;
-    const title = document.getElementById("taskTitle").value.trim();
-    const origin = document.getElementById("taskOrigin").value.trim();
-    const locationInputs = Array.from(document.querySelectorAll("input[name='taskLocations[]']")).map(i => i.value.trim()).filter(x=>x);
-    const duration = parseFloat(document.getElementById("taskDuration").value) || 0;
-    const date = document.getElementById("taskDate").value;
-    const priority = document.getElementById("taskPriority").value || "Medium";
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData.entries());
+  data["taskLocations[]"] = formData.getAll("taskLocations[]"); // preserve multiple locations
 
-    // Build task object (locations array stored in custom field for now)
-    const newTask = {
-      id: idVal ? parseInt(idVal) : (tasks.length ? Math.max(...tasks.map(t=>t.id)) + 1 : 1),
-      title,
-      origin,
-      locations: locationInputs,
-      location: locationInputs[0] || "", // keep backward-compat display
-      duration,
-      date,
-      priority
-    };
+  // Normalize for backend
+  data.location = Array.isArray(data["taskLocations[]"]) 
+      ? data["taskLocations[]"].join(", ")
+      : data["taskLocations[]"];
 
-    if (idVal) {
-      // edit existing
-      const idx = tasks.findIndex(t => t.id === newTask.id);
-      if (idx > -1) tasks[idx] = newTask;
+  if(!data.title || !data.origin || !data.location || !data.duration || !data.date || !data.priority){
+    alert("Please fill out all fields before saving a task.");
+  }
+  
+  try {
+    let res;
+    if (data.id) {
+      res = await fetch(`/tasks/${data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
     } else {
-      tasks.push(newTask);
+      res = await fetch("/add-task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
     }
 
-    loadTasks();
+    if (!res.ok) throw new Error("Failed to save task");
+
     modal.classList.remove("show");
     taskForm.reset();
-  });
+    loadTasks();
+  } catch (err) {
+    console.error("Error saving task:", err);
+  }
+});
 
   // ACTION BUTTONS (edit/delete/complete) - event delegation on taskList
   taskList.addEventListener("click", (e) => {
     const id = parseInt(e.target.dataset.id);
     if (e.target.classList.contains("delete-btn")) {
-      const idx = tasks.findIndex(t => t.id === id);
-      if (idx > -1) tasks.splice(idx, 1);
-      loadTasks();
+      taskToDelete = id;
+      deleteModal.classList.add("show");
     } else if (e.target.classList.contains("edit-btn")) {
-      const t = tasks.find(t => t.id === id);
+      const t = currentTasks.find(task => task.id === id);
       if (!t) return;
       // populate form for edit
+      document.getElementById("taskId").value = t.id; //store id so we know it's edit
       document.getElementById("taskTitle").value = t.title || "";
       document.getElementById("taskOrigin").value = t.origin || "";
       document.getElementById("taskDuration").value = t.duration || "";
@@ -179,7 +207,7 @@ document.addEventListener("DOMContentLoaded", loadTasks);
       modal.classList.add("show");
       document.getElementById("modalTitle").innerText = "Edit Task";
     } else if (e.target.classList.contains("complete-btn")) {
-      const t = tasks.find(t => t.id === id);
+      const t = currentTasks.find(task => task.id === id);
       if (t) {
         t.complete = 1;
         // simple visual: add a style for completed tasks or remove them

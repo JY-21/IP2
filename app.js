@@ -19,8 +19,10 @@ app.use(session({
 
 //serve static html files (login and sign up)
 app.use(express.static(path.join(__dirname, "views")));
-
 app.use(express.static(path.join(__dirname, "public")));
+
+app.use(express.json()); //built-in JSON parser
+app.use(bodyParser.urlencoded({ extended: false })); // form parse if needed
 
 //MySQL connection
 const db = mysql.createConnection({
@@ -66,21 +68,28 @@ app.post("/signup", (req, res) => {
 
 //handle login
 app.post("/login", (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.body || {};
+
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: "Missing username or password" });
+  }
 
   db.query("SELECT * FROM users WHERE username = ?", [username], (err, results) => {
-    if (err) throw err;
+    if (err) {
+      console.error("Login DB Error:", err);
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
 
     if (results.length === 0) {
-      return res.send("User not found!");
+      return res.status(401).json({ success: false, message: "User not found!" });
     }
 
     const user = results[0];
     if (bcrypt.compareSync(password, user.password)) {
       req.session.user = user;
-      res.redirect("/home"); // redirect to homepage
+      return res.json({ success: true });
     } else {
-      res.send("Incorrect password!");
+      return res.status(401).json({ success: false, message: "Incorrect password!" });
     }
   });
 });
@@ -137,30 +146,56 @@ app.post('/add-task', (req, res)=>{
   );
 });
 
-//edit task
+// edit task
 app.put('/tasks/:id', (req, res) => {
-    const { title, origin, location, duration, date, priority, complete } = req.body;
+    let { title, origin, duration, date, priority, complete } = req.body;
+    let locations = req.body["taskLocations[]"];
+
+    // handle multiple locations
+    if (Array.isArray(locations)) {
+        locations = locations.join(", ");
+    }
+
     db.query(
-        "UPDATE tasks SET title=?, origin=?, location=?, duration=?, date=?, priority=?, complete=? WHERE task_id=? AND user_id=?",
-        [title, origin, location, duration, date, priority, complete || 0, req.params.id, req.session.user.id],
-        (err) => {
-            if (err) throw err;
-            res.send({ success: true });
+        `UPDATE tasks 
+         SET title=?, origin=?, location=?, duration=?, date=?, priority=?, complete=? 
+         WHERE task_id=? AND user_id=?`,
+        [
+          title,
+          origin,
+          locations || "",
+          duration,
+          date,
+          priority,
+          complete || 0,
+          req.params.id,
+          req.session.user.user_id 
+        ],
+        (err, result) => {
+            if (err) {
+                console.error("DB Update Error:", err);
+                return res.status(500).json({ error: "Database error" });
+            }
+            res.json({ success: true });
         }
     );
 });
 
-//delete task
+// delete task
 app.delete('/tasks/:id', (req, res) => {
     db.query(
         "DELETE FROM tasks WHERE task_id=? AND user_id=?",
-        [req.params.id, req.session.user.id],
+        [req.params.id, req.session.user.user_id], // ✅ FIX HERE
         (err) => {
-            if (err) throw err;
-            res.send({ success: true });
+            if (err) {
+                console.error("DB Delete Error:", err);
+                return res.status(500).json({ error: "Database error" });
+            }
+            res.json({ success: true });
         }
     );
 });
+
 
 //logout
 app.get('/logout', (req, res) => {

@@ -367,3 +367,33 @@ a:hover {
   background: #1b5e20;
 }
 
+/* Modal styling (reuse taskModal styles if needed) */
+#deleteModal {
+  display: none;
+}
+#deleteModal.show {
+  display: flex; /* or block depending on your modal style */
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.task-bar{
+  transition: opacity 0.5s ease, transform, 0.5s ease;
+}
+
+.task-bar.fade-out {
+  opacity: 0;
+  transform: translateX(-50px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* incorrect password error message */
+.error {
+  color: red;
+  margin-top: 10px;
+  font-weight: bold;
+  text-align: center;
+}

@@ -9,17 +9,44 @@
         <div class ="card">
             <div class="card-header">Login</div>
             <div class="card-body">
-                <form action="/login" method="POST">
+                <form action="/login" id="loginForm">
                     <label for = "username">Username:</label><br>
                     <input type ="text" id ="username" name="username"><br>
                     <label for = "password">Password:</label><br>
                     <input type = "text" id="password" name ="password"><br>
                     <button type="submit">Login</button>
                 </form>
+                <p id="loginError" class="error"></p>
             </div>
             <div class="card-footer">
                 <a href="/signup">Don't have an account? Sign Up</a>
             </div>
         </div>
     </body>
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const res = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || !result.success) {
+            document.getElementById("loginError").innerText = result.message || "Login failed!";
+            } else {
+            window.location.href = "/home"; // redirect only on success
+            }
+        } catch (err) {
+            document.getElementById("loginError").innerText = "Something went wrong. Try again.";
+        }
+        });
+    </script>
 </html>
