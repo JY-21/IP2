@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
         div.innerHTML = `
           <div class="task-info">
             <strong>${escapeHtml(t.title)}</strong>
-            <div class="meta">Location: ${escapeHtml(t.location)} <br> Origin: ${escapeHtml(t.origin)} <br> Duration: ${t.duration} hour <br> Due: ${t.date} <br> Priority: ${t.priority}</div>
+            <div class="meta">Location: ${escapeHtml(t.location)} <br> Origin: ${escapeHtml(t.origin)} <br> Category: ${t.category} <br> Deadline: ${t.deadline} <br> Priority: ${t.priority} <br> ${t.remarks}</div>
           </div>
           <div class="task-actions">
             <button class="edit-btn" data-id="${t.id}" title="Edit">✏️</button>
@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", loadTasks);
       ? data["taskLocations[]"].join(", ")
       : data["taskLocations[]"];
 
-  if(!data.title || !data.origin || !data.location || !data.duration || !data.date || !data.priority){
+  if(!data.title || !data.category || !data.origin || !data.location || !data.deadline || !data.priority){
     alert("Please fill out all fields before saving a task.");
   }
   
@@ -186,26 +186,33 @@ document.addEventListener("DOMContentLoaded", loadTasks);
     } else if (e.target.classList.contains("edit-btn")) {
       const t = currentTasks.find(task => task.id === id);
       if (!t) return;
+
       // populate form for edit
-      document.getElementById("taskId").value = t.id; //store id so we know it's edit
+      document.getElementById("taskId").value = t.id;
       document.getElementById("taskTitle").value = t.title || "";
+      document.getElementById("taskCategory").value = t.category || "";
+      document.getElementById("taskRemarks").value = t.remarks || "";
       document.getElementById("taskOrigin").value = t.origin || "";
-      document.getElementById("taskDuration").value = t.duration || "";
-      document.getElementById("taskDate").value = t.date || "";
+      document.getElementById("taskDeadline").value = t.deadline || "";
       document.getElementById("taskPriority").value = t.priority || "Medium";
 
-      // reset locations container, then populate
+      // reset locations
       locationsContainer.innerHTML = "";
-      const locs = t.locations && t.locations.length ? t.locations : [t.location || ""];
-      locs.forEach((loc, i) => {
+      const locs = t.location ? t.location.split(",") : [""];
+      locs.forEach(loc => {
         const div = document.createElement("div");
         div.className = "location-input";
-        div.innerHTML = `<input type="text" name="taskLocations[]" placeholder="Enter location" value="${escapeHtml(loc)}"><button type="button" class="remove-location">-</button>`;
+        div.innerHTML = `
+          <input type="text" name="taskLocations[]" placeholder="Enter location" value="${escapeHtml(loc.trim())}">
+          <button type="button" class="remove-location">-</button>
+        `;
         locationsContainer.appendChild(div);
       });
 
+      // show modal
       modal.classList.add("show");
-      document.getElementById("modalTitle").innerText = "Edit Task";
+      document.querySelector(".modal-header").textContent = "Edit Task";
+
     } else if (e.target.classList.contains("complete-btn")) {
       const t = currentTasks.find(task => task.id === id);
       if (t) {

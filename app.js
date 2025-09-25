@@ -29,7 +29,10 @@ const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'erruns_db'
+    database: 'erruns_db',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0 
 });
 
 db.connect(err => {
@@ -109,7 +112,7 @@ app.get('/tasks', (req, res)=>{
   }
 
   const sql = `
-    SELECT task_id AS id, title, origin, location, duration, date, priority, complete
+    SELECT task_id AS id, title, category, remarks, origin, location, deadline, priority, complete
     FROM tasks
     WHERE user_id = ?
   `;
@@ -125,7 +128,7 @@ app.get('/tasks', (req, res)=>{
 //add task
 app.post('/add-task', (req, res)=>{
   if(!req.session.user) return res.status(401).send("Unauthorized");
-  const { title, origin, duration, date, priority, complete } = req.body;
+  const { title, category, remarks, origin, deadline, priority, complete } = req.body;
   let locations = req.body["taskLocations[]"];
 
   //if user adds multiple, req.body.locations[] comes as array
@@ -134,8 +137,8 @@ app.post('/add-task', (req, res)=>{
   }
 
   db.query(
-    "INSERT INTO tasks (user_id, title, origin, location, duration, date, priority, complete) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
-  [req.session.user.user_id, title, origin, locations || "", duration, date, priority, complete || 0],
+    "INSERT INTO tasks (user_id, title, category, remarks, origin, location, deadline, priority, complete) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+  [req.session.user.user_id, title, category, remarks, origin, locations || "", deadline, priority, complete || 0],
     (err, result) => {
       if(err){
         console.error("DB Insert Error:", err);
@@ -148,7 +151,7 @@ app.post('/add-task', (req, res)=>{
 
 // edit task
 app.put('/tasks/:id', (req, res) => {
-    let { title, origin, duration, date, priority, complete } = req.body;
+    const { title, category, remarks, origin, deadline, priority, complete } = req.body;
     let locations = req.body["taskLocations[]"];
 
     // handle multiple locations
@@ -158,14 +161,15 @@ app.put('/tasks/:id', (req, res) => {
 
     db.query(
         `UPDATE tasks 
-         SET title=?, origin=?, location=?, duration=?, date=?, priority=?, complete=? 
+         SET title=?, category=?, remarks=?, origin=?, location=?, deadline=?, priority=?, complete=? 
          WHERE task_id=? AND user_id=?`,
         [
           title,
+          category,
+          remarks,
           origin,
           locations || "",
-          duration,
-          date,
+          deadline,
           priority,
           complete || 0,
           req.params.id,
