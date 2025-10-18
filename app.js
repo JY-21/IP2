@@ -8,6 +8,25 @@ const path = require("path");
 const app = express();
 const PORT = 3000;
 
+const axios = require("axios"); //install: npm install axios
+
+app.post("/api/predict-priority", async (req, res) => {
+  try{
+    const { category, urgency, deadline_hours } = req.body;
+
+    const response = await axios.post("http://localhost:5000/predict", {
+      category,
+      urgency,
+      deadline_hours
+    });
+
+    res.json(response.data); //{ priority: "High"}
+  } catch (error) {
+    console.error("ML API error:", error.message);
+    res.status(500).json({ error: "Could not get prediction"});
+  }
+});
+
 //middleware
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
@@ -24,21 +43,32 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json()); //built-in JSON parser
 app.use(bodyParser.urlencoded({ extended: false })); // form parse if needed
 
-//MySQL connection
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'erruns_db',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0 
+// ✅ Persistent MySQL pool (won't close between queries)
+const db = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'erruns_db',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-db.connect(err => {
-    if(err) throw err;
-    console.log('MySQL connected!');
+// optional: monitor pool errors
+db.on('error', (err) => {
+  console.error('⚠️ MySQL Pool Error:', err.code);
 });
+
+
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error('❌ MySQL connection failed:', err);
+  } else {
+    console.log('✅ MySQL connected!');
+    connection.release(); // release back to pool
+  }
+});
+
 
 //routes
 app.get("/", (req, res) => {
@@ -125,64 +155,128 @@ app.get('/tasks', (req, res)=>{
   });
 });
 
-//add task
-app.post('/add-task', (req, res)=>{
-  if(!req.session.user) return res.status(401).send("Unauthorized");
-  const { title, category, remarks, origin, deadline, priority, complete } = req.body;
-  let locations = req.body["taskLocations[]"];
+// ADD TASK ROUTE (with ML)
+app.post('/add-task', async (req, res) => {
+  if (!req.session.user) return res.status(401).send("Unauthorized");
 
-  //if user adds multiple, req.body.locations[] comes as array
-  if(Array.isArray(locations)){
-    locations = locations.join(", ");
-  }
+  try {
+    const { title, category, remarks, origin, deadline } = req.body;
+    let locations = req.body["taskLocations[]"];
+    if (Array.isArray(locations)) locations = locations.join(", ");
 
-  db.query(
-    "INSERT INTO tasks (user_id, title, category, remarks, origin, location, deadline, priority, complete) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-  [req.session.user.user_id, title, category, remarks, origin, locations || "", deadline, priority, complete || 0],
-    (err, result) => {
-      if(err){
-        console.error("DB Insert Error:", err);
-        return res.status(500).json({error: "Error saving task"});
-      }
-      res.json({ success: true, taskId: result.insertId});
+    // calculate hours until deadline
+    const deadlineDate = new Date(deadline + 'T23:59:59');// end of the selected day
+    const hoursUntilDeadline = Math.max(1, Math.floor((deadlineDate - new Date()) / 36e5));
+
+    let predictedPriority = "Medium"; // default fallback
+
+    try {
+      // send request to ML
+      const mlResponse = await axios.post("http://127.0.0.1:5000/predict", {
+        category: category || "General",
+        urgency: req.body.priority || "Medium",   // default if missing
+        deadline_hours: hoursUntilDeadline
+      });
+      predictedPriority = mlResponse.data.priority || "Medium";
+      console.log("✅ ML Response:", mlResponse.data);
+    } catch (mlErr) {
+      console.warn("⚠️ ML Server not reachable, using fallback priority:", mlErr.message);
     }
-  );
+
+    // insert into DB
+    db.query(
+      `INSERT INTO tasks 
+       (user_id, title, category, remarks, origin, location, deadline, priority, complete) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.session.user.user_id,
+        title,
+        category,
+        remarks,
+        origin,
+        locations || "",
+        deadline,
+        predictedPriority,
+        0
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("DB Insert Error:", err);
+          return res.status(500).json({ error: "Error saving task" });
+        }
+        console.log("✅ Task saved:", result.insertId);
+        res.json({ success: true, taskId: result.insertId, priority: predictedPriority });
+      }
+    );
+
+  } catch (err) {
+    console.error("ML/DB Error:", err);
+    res.status(500).json({ error: "Something went wrong" });
+  }
 });
 
-// edit task
-app.put('/tasks/:id', (req, res) => {
-    const { title, category, remarks, origin, deadline, priority, complete } = req.body;
-    let locations = req.body["taskLocations[]"];
+// EDIT TASK ROUTE (with ML priority recalculation)
+app.put('/tasks/:id', async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
 
-    // handle multiple locations
-    if (Array.isArray(locations)) {
-        locations = locations.join(", ");
-    }
+    try {
+        const { title, category, remarks, origin, deadline, priority, complete } = req.body;
+        let locations = req.body["taskLocations[]"];
 
-    db.query(
-        `UPDATE tasks 
-         SET title=?, category=?, remarks=?, origin=?, location=?, deadline=?, priority=?, complete=? 
-         WHERE task_id=? AND user_id=?`,
-        [
-          title,
-          category,
-          remarks,
-          origin,
-          locations || "",
-          deadline,
-          priority,
-          complete || 0,
-          req.params.id,
-          req.session.user.user_id 
-        ],
-        (err, result) => {
-            if (err) {
-                console.error("DB Update Error:", err);
-                return res.status(500).json({ error: "Database error" });
-            }
-            res.json({ success: true });
+        // Handle multiple locations
+        if (Array.isArray(locations)) {
+            locations = locations.join(", ");
         }
-    );
+
+        // Calculate hours until new deadline for ML prediction
+        const deadlineDate = new Date(deadline + 'T23:59:59');
+        const hoursUntilDeadline = Math.max(1, Math.floor((deadlineDate - new Date()) / 36e5));
+
+        let predictedPriority = priority || "Medium"; // Use existing priority as fallback
+
+        // Recalculate priority using ML if deadline changed
+        try {
+            const mlResponse = await axios.post("http://127.0.0.1:5000/predict", {
+                category: category || "General",
+                urgency: priority || "Medium",
+                deadline_hours: hoursUntilDeadline
+            });
+            predictedPriority = mlResponse.data.priority || "Medium";
+            console.log("✅ ML Recalculated Priority:", predictedPriority);
+        } catch (mlErr) {
+            console.warn("⚠️ ML Server not reachable, using existing priority:", mlErr.message);
+        }
+
+        // Update task with potentially new priority
+        db.query(
+            `UPDATE tasks 
+             SET title=?, category=?, remarks=?, origin=?, location=?, deadline=?, priority=?, complete=? 
+             WHERE task_id=? AND user_id=?`,
+            [
+                title,
+                category,
+                remarks,
+                origin,
+                locations || "",
+                deadline,
+                predictedPriority, // Use the recalculated priority
+                complete || 0,
+                req.params.id,
+                req.session.user.user_id 
+            ],
+            (err, result) => {
+                if (err) {
+                    console.error("DB Update Error:", err);
+                    return res.status(500).json({ error: "Database error" });
+                }
+                res.json({ success: true, newPriority: predictedPriority });
+            }
+        );
+
+    } catch (err) {
+        console.error("Edit Task Error:", err);
+        res.status(500).json({ error: "Something went wrong" });
+    }
 });
 
 // delete task
@@ -198,8 +292,7 @@ app.delete('/tasks/:id', (req, res) => {
             res.json({ success: true });
         }
     );
-});
-
+}); 
 
 //logout
 app.get('/logout', (req, res) => {
