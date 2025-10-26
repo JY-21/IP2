@@ -155,7 +155,7 @@ app.get('/tasks', (req, res)=>{
   });
 });
 
-// ADD TASK ROUTE (with ML)
+// ADD TASK ROUTE (with ML) - FIXED
 app.post('/add-task', async (req, res) => {
   if (!req.session.user) return res.status(401).send("Unauthorized");
 
@@ -164,23 +164,29 @@ app.post('/add-task', async (req, res) => {
     let locations = req.body["taskLocations[]"];
     if (Array.isArray(locations)) locations = locations.join(", ");
 
-    // calculate hours until deadline
-    const deadlineDate = new Date(deadline + 'T23:59:59');// end of the selected day
-    const hoursUntilDeadline = Math.max(1, Math.floor((deadlineDate - new Date()) / 36e5));
+    // ✅ FIXED: Calculate hours until deadline correctly
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+    const timeDiff = deadlineDate.getTime() - now.getTime();
+    const daysUntilDeadline = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const hoursUntilDeadline = Math.max(1, daysUntilDeadline * 24);
 
-    let predictedPriority = "Medium"; // default fallback
+    console.log("🔍 ADD TASK - Hours Calculation:");
+    console.log("  Days until deadline:", daysUntilDeadline);
+    console.log("  Hours until deadline:", hoursUntilDeadline);
+
+    let predictedPriority = "Medium";
 
     try {
-      // send request to ML
       const mlResponse = await axios.post("http://127.0.0.1:5000/predict", {
         category: category || "General",
-        urgency: req.body.priority || "Medium",   // default if missing
+        urgency: req.body.priority || "Medium",
         deadline_hours: hoursUntilDeadline
       });
       predictedPriority = mlResponse.data.priority || "Medium";
-      console.log("✅ ML Response:", mlResponse.data);
+      console.log("✅ ML Response Priority:", predictedPriority);
     } catch (mlErr) {
-      console.warn("⚠️ ML Server not reachable, using fallback priority:", mlErr.message);
+      console.warn("⚠️ ML Server not reachable, using fallback priority");
     }
 
     // insert into DB
@@ -204,7 +210,6 @@ app.post('/add-task', async (req, res) => {
           console.error("DB Insert Error:", err);
           return res.status(500).json({ error: "Error saving task" });
         }
-        console.log("✅ Task saved:", result.insertId);
         res.json({ success: true, taskId: result.insertId, priority: predictedPriority });
       }
     );
@@ -215,7 +220,7 @@ app.post('/add-task', async (req, res) => {
   }
 });
 
-// EDIT TASK ROUTE (with ML priority recalculation)
+// EDIT TASK ROUTE (with ML priority recalculation) - FIXED
 app.put('/tasks/:id', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -223,18 +228,23 @@ app.put('/tasks/:id', async (req, res) => {
         const { title, category, remarks, origin, deadline, priority, complete } = req.body;
         let locations = req.body["taskLocations[]"];
 
-        // Handle multiple locations
         if (Array.isArray(locations)) {
             locations = locations.join(", ");
         }
 
-        // Calculate hours until new deadline for ML prediction
-        const deadlineDate = new Date(deadline + 'T23:59:59');
-        const hoursUntilDeadline = Math.max(1, Math.floor((deadlineDate - new Date()) / 36e5));
+        // ✅ FIXED: Calculate hours until deadline correctly
+        const now = new Date();
+        const deadlineDate = new Date(deadline);
+        const timeDiff = deadlineDate.getTime() - now.getTime();
+        const daysUntilDeadline = Math.ceil(timeDiff / (1000 * 3600 * 24));
+        const hoursUntilDeadline = Math.max(1, daysUntilDeadline * 24);
 
-        let predictedPriority = priority || "Medium"; // Use existing priority as fallback
+        console.log("🔍 EDIT TASK - Hours Calculation:");
+        console.log("  Days until deadline:", daysUntilDeadline);
+        console.log("  Hours until deadline:", hoursUntilDeadline);
 
-        // Recalculate priority using ML if deadline changed
+        let predictedPriority = priority || "Medium";
+
         try {
             const mlResponse = await axios.post("http://127.0.0.1:5000/predict", {
                 category: category || "General",
@@ -244,10 +254,9 @@ app.put('/tasks/:id', async (req, res) => {
             predictedPriority = mlResponse.data.priority || "Medium";
             console.log("✅ ML Recalculated Priority:", predictedPriority);
         } catch (mlErr) {
-            console.warn("⚠️ ML Server not reachable, using existing priority:", mlErr.message);
+            console.warn("⚠️ ML Server not reachable, using existing priority");
         }
 
-        // Update task with potentially new priority
         db.query(
             `UPDATE tasks 
              SET title=?, category=?, remarks=?, origin=?, location=?, deadline=?, priority=?, complete=? 
@@ -259,7 +268,7 @@ app.put('/tasks/:id', async (req, res) => {
                 origin,
                 locations || "",
                 deadline,
-                predictedPriority, // Use the recalculated priority
+                predictedPriority,
                 complete || 0,
                 req.params.id,
                 req.session.user.user_id 
