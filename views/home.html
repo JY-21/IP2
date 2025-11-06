@@ -66,21 +66,14 @@
 
                     <div>
                     <label for="taskOrigin">Point of Origin:</label>
-                    <input type="text" id="taskOrigin" name="origin" required>
+                    <input type="text" id="taskOrigin" name="origin" placeholder="Your starting location" required>
                     </div>
 
-                    <input type="hidden" id="taskOriginLat" name="originLat">
-                    <input type="hidden" id="taskOriginLon" name="originLon">
-                    <div class="full-width">
-                    <label>Locations:</label>
-                    <div id="locationsContainer">
-                        <div class="location-input">
-                        <input type="text" name="taskLocations[]" placeholder="Enter Location" required>
-                        <button type="button" class="remove-location">-</button>
-                        </div>
+                    <div>
+                    <label for="taskDestination">Destination:</label>
+                    <input type="text" id="taskDestination" name="destination" placeholder="Where you need to go" required>
                     </div>
-                    <button type="button" id="addLocationBtn" class="small-btn">+ Add Location</button>
-                    </div>
+
 
                     <div>
                         <label for="taskDeadline">Deadline:</label>
@@ -110,16 +103,6 @@
                 </div>
             </div>
         </div>
-        
-        <!--map section-->
-        <div class="map-section">
-            <h2>Task Map View</h2>
-            <div class="map-controls">
-                <button id="showMapBtn" class="map-btn">Show Map</button>
-                <button id="hidMapBtn" class="map-btn" style="display: none;">Hide Map</button>
-            </div>
-            <div id="taskMap" style="height: 400px; width: 100%; display: none; margin-top: 1rem;"></div>
-            <!--route info will be dynamically inserted here-->
-        </div>
+    
     </body>
 </html>
