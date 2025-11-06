@@ -5,6 +5,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
         <link rel="stylesheet" href="styles.css">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     </head>
     <script src="script.js"></script>
     <body>
@@ -67,6 +69,8 @@
                     <input type="text" id="taskOrigin" name="origin" required>
                     </div>
 
+                    <input type="hidden" id="taskOriginLat" name="originLat">
+                    <input type="hidden" id="taskOriginLon" name="originLon">
                     <div class="full-width">
                     <label>Locations:</label>
                     <div id="locationsContainer">
@@ -79,8 +83,8 @@
                     </div>
 
                     <div>
-                    <label for="taskDeadline">Deadline:</label>
-                    <input type="date" id="taskDeadline" name="deadline" required>
+                        <label for="taskDeadline">Deadline:</label>
+                        <input type="date" id="taskDeadline" name="deadline" required>
                     </div>
 
                 </form>
@@ -107,5 +111,15 @@
             </div>
         </div>
         
+        <!--map section-->
+        <div class="map-section">
+            <h2>Task Map View</h2>
+            <div class="map-controls">
+                <button id="showMapBtn" class="map-btn">Show Map</button>
+                <button id="hidMapBtn" class="map-btn" style="display: none;">Hide Map</button>
+            </div>
+            <div id="taskMap" style="height: 400px; width: 100%; display: none; margin-top: 1rem;"></div>
+            <!--route info will be dynamically inserted here-->
+        </div>
     </body>
 </html>

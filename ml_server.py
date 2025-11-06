@@ -1,58 +1,60 @@
 from flask import Flask, request, jsonify
-import pandas as pd
-import pickle
-import os
+import joblib
+import numpy as np
 
 app = Flask(__name__)
 
-# Load your trained model and encoder if they exist
+# Try to load your trained model
 try:
-    model = pickle.load(open('model.pkl', 'rb'))
-    encoder = pickle.load(open('encoder.pkl', 'rb'))
-    model_loaded = True
-    print("✅ ML Model loaded successfully")
-except:
-    model_loaded = False
-    print("⚠️ No ML model found, using rule-based system")
+    model = joblib.load("random_forest_model.joblib")
+    print("✅ ML model loaded successfully!")
+    USE_MODEL = True
+except Exception as e:
+    print("⚠️ No ML model found or failed to load:", e)
+    model = None
+    USE_MODEL = False
 
-@app.route('/predict', methods=['POST'])
+
+@app.route("/predict", methods=["POST"])
 def predict():
     try:
         data = request.get_json()
-        category = data.get('category', 'General')
-        urgency = data.get('urgency', 'Medium')
-        deadline_hours = float(data.get('deadline_hours', 24))
-        
-        print(f"🎯 ML RECEIVED - Category: {category}, Urgency: {urgency}, Hours: {deadline_hours}")
-        
-        # ✅ SIMPLE DEADLINE-ONLY LOGIC (ignore urgency for now)
-        if deadline_hours < 24:
-            priority = "High"
-            print("   → High priority: Less than 24 hours")
-        elif deadline_hours < 72:
-            priority = "Medium" 
-            print("   → Medium priority: Less than 72 hours")
-        else:
-            priority = "Low"
-            print("   → Low priority: 72+ hours")
-            
-        print(f"📊 FINAL PRIORITY: {priority}")
-        
-        return jsonify({'priority': priority})
-        
-    except Exception as e:
-        print(f"❌ ML Error: {str(e)}")
-        # Fallback - simple deadline-based
-        try:
-            deadline_hours = float(data.get('deadline_hours', 24))
-            if deadline_hours < 24:
-                return jsonify({'priority': 'High'})
-            elif deadline_hours < 72:
-                return jsonify({'priority': 'Medium'})
-            else:
-                return jsonify({'priority': 'Low'})
-        except:
-            return jsonify({'priority': 'Medium'})
+        print("📦 Received:", data)
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+        category = data.get("category", "General")
+        urgency = data.get("urgency", "Medium")
+        deadline_hours = float(data.get("deadline_hours", 24))
+
+        # Convert text values to numeric features for model
+        # use the same encoding used during training
+        # Example: simple manual mapping
+        category_map = {"Groceries": 0, "Work": 1, "Health": 2, "Errand": 3, "General": 4}
+        urgency_map = {"Low": 0, "Medium": 1, "High": 2}
+
+        cat_val = category_map.get(category, 4)
+        urg_val = urgency_map.get(urgency, 1)
+
+        X = np.array([[cat_val, urg_val, deadline_hours]])
+
+        if USE_MODEL and model:
+            pred = model.predict(X)[0]
+            print("✅ Model Prediction:", pred)
+            return jsonify({"priority": str(pred)})
+        else:
+            # fallback rule-based logic
+            if deadline_hours < 6 or urgency == "High":
+                priority = "High"
+            elif deadline_hours < 24:
+                priority = "Medium"
+            else:
+                priority = "Low"
+
+            return jsonify({"priority": priority})
+
+    except Exception as e:
+        print("Prediction error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
