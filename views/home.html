@@ -111,6 +111,41 @@
         </div>
     
         <!--Map Modal for Route Selection-->
-        
+        <div id="mapModal" class="modal">
+            <div class="modal-content" style="max-width: 90%; height: 80%">
+                <div class="modal-header">
+                    <span id="closeMapModal" class="close">&times;</span>
+                    <h2>Select Route Locations</h2>
+                </div>
+                <div class="modal-body" style="height: calc(100% - 120px); display: flex; flex-direction: column;">
+                    <div class="map-controls">
+                        <div class="location-inputs">
+                            <div class="input-group">
+                                <label for="originSearch">Origin:</label>
+                                <input type="text" id="originSearch" placeholder="Search for origin location...">
+                                <button id="useCurrentLocation" class="current-location-btn">📍</button>
+                            </div>
+                            <div class="input-group">
+                                <label for="destinationSearch">Destination:</label>
+                                <input type="text" id="destinationSearch" placeholder="Search for destination location...">
+                            </div>
+                        </div>
+                        <div class="map-buttons">
+                            <button id="searchLocations" class="search-btn">Search Locations</button>
+                            <button id="generateRoute" class="route-btn" disabled>Generate Route</button>
+                            <button id="saveRoute" class="save-btn" disabled>Save Route</button>
+                        </div>
+                    </div>
+                    <div id="routeMap" style="flex: 1; margin-top: 15px; border: 1px solid #ccc; border-radius: 4px;"></div>
+                    <div id="routeInfo" class="route-info" style="display:none;">
+                        <h3>Route Information</h3>
+                        <p><strong>Distance:</strong> <span id="routeDistance">-</span></p>
+                        <p><strong>Duration:</strong> <span id="routeDuration">-</span></p>
+                        <p><strong>Origin:</strong> <span id="selectedOrigin">-</span></p>
+                        <p><strong>Destination:</strong> <span id="selectedDestination">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </body>
 </html>

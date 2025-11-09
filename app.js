@@ -179,64 +179,64 @@ app.post("/api/predict-priority", async (req, res) => {
 
 // Store route information for a task
 app.post('/tasks/:id/route', (req, res) => {
-  if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
+    if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
 
-  const { origin, destination, originLat, originLon, destLat, destLon, distance, duration } = req.body;
-  
-  db.query(
-    `UPDATE tasks 
-     SET route_origin=?, route_destination=?, 
-         route_origin_lat=?, route_origin_lon=?,
-         route_dest_lat=?, route_dest_lon=?,
-         route_distance=?, route_duration=?
-     WHERE task_id=? AND user_id=?`,
-    [
-      origin, destination,
-      originLat, originLon,
-      destLat, destLon,
-      distance, duration,
-      req.params.id, req.session.user.user_id
-    ],
-    (err, result) => {
-      if (err) {
-        console.error("Route Save Error:", err);
-        return res.status(500).json({ error: "Error saving route" });
-      }
-      res.json({ success: true });
-    }
-  );
+    const { origin, destination, originLat, originLon, destLat, destLon, distance, duration } = req.body;
+    
+    db.query(
+        `UPDATE tasks 
+         SET route_origin=?, route_destination=?, 
+             route_origin_lat=?, route_origin_lon=?,
+             route_dest_lat=?, route_dest_lon=?,
+             route_distance=?, route_duration=?
+         WHERE task_id=? AND user_id=?`,
+        [
+            origin, destination,
+            originLat, originLon,
+            destLat, destLon,
+            distance, duration,
+            req.params.id, req.session.user.user_id
+        ],
+        (err, result) => {
+            if (err) {
+                console.error("Route Save Error:", err);
+                return res.status(500).json({ error: "Error saving route" });
+            }
+            res.json({ success: true });
+        }
+    );
 });
 
 // Get route information for a task
 app.get('/tasks/:id/route', (req, res) => {
-  if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
+    if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
 
-  const sql = `
-    SELECT route_origin, route_destination, 
-           route_origin_lat, route_origin_lon,
-           route_dest_lat, route_dest_lon,
-           route_distance, route_duration
-    FROM tasks 
-    WHERE task_id=? AND user_id=?`;
-  
-  db.query(sql, [req.params.id, req.session.user.user_id], (err, results) => {
-    if (err) {
-      console.error("Route Fetch Error:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
+    const sql = `
+        SELECT route_origin, route_destination, 
+               route_origin_lat, route_origin_lon,
+               route_dest_lat, route_dest_lon,
+               route_distance, route_duration
+        FROM tasks 
+        WHERE task_id=? AND user_id=?`;
     
-    if (results.length > 0 && results[0].route_origin) {
-      res.json({ 
-        success: true, 
-        route: results[0] 
-      });
-    } else {
-      res.json({ 
-        success: false, 
-        message: "No route saved" 
-      });
-    }
-  });
+    db.query(sql, [req.params.id, req.session.user.user_id], (err, results) => {
+        if (err) {
+            console.error("Route Fetch Error:", err);
+            return res.status(500).json({ error: "Database error" });
+        }
+        
+        if (results.length > 0 && results[0].route_origin) {
+            res.json({ 
+                success: true, 
+                route: results[0] 
+            });
+        } else {
+            res.json({ 
+                success: false, 
+                message: "No route saved" 
+            });
+        }
+    });
 });
 
 // Middleware
