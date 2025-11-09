@@ -12,7 +12,7 @@ const axios = require("axios");
 
 const OPENROUTE_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjllMzhmNmVjZDgwODQwM2U5YWM0NmNkNGNkZjgwOWJiIiwiaCI6Im11cm11cjY0In0=';
 
-// Get directions between two points - SIMPLIFIED (will need addresses)
+// Get directions between two points
 app.post('/api/directions', async (req, res) => {
   try {
     const { origin, destination, profile = 'driving-car' } = req.body;
@@ -21,8 +21,6 @@ app.post('/api/directions', async (req, res) => {
       return res.status(400).json({ error: "Origin and destination required" });
     }
 
-    // Note: Without coordinates, we'll need to geocode first
-    // For now, return a simple response
     res.json({
       success: true,
       message: "Directions service - coordinates needed for routing",
@@ -36,14 +34,13 @@ app.post('/api/directions', async (req, res) => {
   }
 });
 
-//get user's current location (simplified)
+// Get user's current location
 app.get('/api/user-location', async (req, res) => {
   if(!req.session.user){
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   try{
-    // Return default location
     res.json({
       success: true,
       location: {
@@ -57,16 +54,15 @@ app.get('/api/user-location', async (req, res) => {
   }
 });
 
-//optimized route (simplified)
+// Optimized route
 app.get('/api/optimized-route', async (req, res) => {
   if(!req.session.user){
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   try{
-    //get all tasks
     const sql = `
-      SELECT task_id, title, origin, location, priority
+      SELECT task_id, title, origin, location, priority, urgency
       FROM tasks
       WHERE user_id = ?`;
 
@@ -84,7 +80,8 @@ app.get('/api/optimized-route', async (req, res) => {
         id: task.task_id,
         title: task.title,
         address: task.location,
-        priority: task.priority
+        priority: task.priority,
+        urgency: task.urgency
       }));
 
       res.json({
@@ -99,26 +96,150 @@ app.get('/api/optimized-route', async (req, res) => {
   }
 });
 
-// Remove geocodeWithORS function entirely
-
+// ML Prediction API with better error handling
 app.post("/api/predict-priority", async (req, res) => {
-  try{
+  try {
     const { category, urgency, deadline_hours } = req.body;
 
-    const response = await axios.post("http://localhost:5000/predict", {
-      category,
-      urgency,
-      deadline_hours
+    console.log('📊 ML Prediction Request:', { category, urgency, deadline_hours });
+
+    // Validate inputs
+    if (!category || !urgency || !deadline_hours) {
+      console.error('❌ Missing required fields for ML prediction');
+      return res.status(400).json({ error: "Missing required fields: category, urgency, deadline_hours" });
+    }
+
+    // Ensure category is one of the expected values
+    const validCategories = ['Bills', 'Delivery', 'Groceries', 'Others'];
+    const normalizedCategory = validCategories.includes(category) ? category : 'Others';
+
+    // Ensure urgency is valid
+    const validUrgencies = ['Low', 'Medium', 'High'];
+    const normalizedUrgency = validUrgencies.includes(urgency) ? urgency : 'Medium';
+
+    // Ensure deadline_hours is a number
+    const hours = parseInt(deadline_hours);
+    if (isNaN(hours) || hours <= 0) {
+      console.error('❌ Invalid deadline_hours:', deadline_hours);
+      return res.status(400).json({ error: "Invalid deadline_hours" });
+    }
+
+    console.log('📊 Normalized ML Input:', { 
+      normalizedCategory, 
+      normalizedUrgency, 
+      hours 
     });
 
-    res.json(response.data);
+    try {
+      const response = await axios.post("http://127.0.0.1:5000/predict", {
+        category: normalizedCategory,
+        urgency: normalizedUrgency,
+        deadline_hours: hours
+      }, {
+        timeout: 5000 // 5 second timeout
+      });
+
+      console.log('✅ ML Response:', response.data);
+      res.json(response.data);
+
+    } catch (mlError) {
+      console.error('⚠️ ML Server Error:', mlError.message);
+      
+      // Fallback priority logic when ML server is down
+      let fallbackPriority = "Medium";
+      
+      if (normalizedUrgency === "High") {
+        fallbackPriority = "High";
+      } else if (hours < 24) {
+        fallbackPriority = "High";
+      } else if (normalizedUrgency === "Low" && hours >= 72) {
+        fallbackPriority = "Low";
+      } else if (normalizedUrgency === "Medium" && hours < 72) {
+        fallbackPriority = "Medium";
+      } else {
+        fallbackPriority = "Medium";
+      }
+
+      console.log('🔄 Using fallback priority:', fallbackPriority);
+      res.json({ 
+        priority: fallbackPriority,
+        fallback: true,
+        message: "ML server unavailable, using fallback logic"
+      });
+    }
+
   } catch (error) {
-    console.error("ML API error:", error.message);
-    res.status(500).json({ error: "Could not get prediction"});
+    console.error("❌ ML API error:", error.message);
+    res.status(500).json({ 
+      error: "Could not get prediction",
+      message: error.message
+    });
   }
 });
 
-//middleware
+// Store route information for a task
+app.post('/tasks/:id/route', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
+
+  const { origin, destination, originLat, originLon, destLat, destLon, distance, duration } = req.body;
+  
+  db.query(
+    `UPDATE tasks 
+     SET route_origin=?, route_destination=?, 
+         route_origin_lat=?, route_origin_lon=?,
+         route_dest_lat=?, route_dest_lon=?,
+         route_distance=?, route_duration=?
+     WHERE task_id=? AND user_id=?`,
+    [
+      origin, destination,
+      originLat, originLon,
+      destLat, destLon,
+      distance, duration,
+      req.params.id, req.session.user.user_id
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Route Save Error:", err);
+        return res.status(500).json({ error: "Error saving route" });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// Get route information for a task
+app.get('/tasks/:id/route', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
+
+  const sql = `
+    SELECT route_origin, route_destination, 
+           route_origin_lat, route_origin_lon,
+           route_dest_lat, route_dest_lon,
+           route_distance, route_duration
+    FROM tasks 
+    WHERE task_id=? AND user_id=?`;
+  
+  db.query(sql, [req.params.id, req.session.user.user_id], (err, results) => {
+    if (err) {
+      console.error("Route Fetch Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    
+    if (results.length > 0 && results[0].route_origin) {
+      res.json({ 
+        success: true, 
+        route: results[0] 
+      });
+    } else {
+      res.json({ 
+        success: false, 
+        message: "No route saved" 
+      });
+    }
+  });
+});
+
+// Middleware
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(session({
@@ -127,7 +248,7 @@ app.use(session({
     saveUninitialized: true
 }));
 
-//serve static html files
+// Serve static files
 app.use(express.static(path.join(__dirname, "views")));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -158,7 +279,7 @@ db.getConnection((err, connection) => {
   }
 });
 
-//routes
+// Routes
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "views", "index.html"));
 });
@@ -171,7 +292,7 @@ app.get("/signup", (req, res) => {
   res.sendFile(path.join(__dirname, "views", "sign_up_page.html"));
 });
 
-//handle sign up
+// Handle sign up
 app.post("/signup", (req, res) => {
   const { first_name, last_name, email, username, password } = req.body;
 
@@ -187,7 +308,7 @@ app.post("/signup", (req, res) => {
   );
 });
 
-//handle login
+// Handle login
 app.post("/login", (req, res) => {
   const { username, password } = req.body || {};
 
@@ -223,7 +344,7 @@ app.get('/home', (req, res) => {
   res.sendFile(path.join(__dirname, "views", "home.html"));
 });
 
-// GET TASKS - SIMPLIFIED (no coordinates)
+// GET TASKS - NO URGENCY
 app.get('/tasks', (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -253,12 +374,14 @@ app.get('/tasks', (req, res) => {
   });
 });
 
-// ADD TASK ROUTE - SIMPLIFIED (no coordinates)
+// ADD TASK ROUTE - SIMPLIFIED (NO URGENCY)
 app.post('/add-task', async (req, res) => {
   if (!req.session.user) return res.status(401).send("Unauthorized");
 
   try {
     const { title, category, remarks, origin, destination, deadline } = req.body;
+
+    console.log('📝 Add Task Request:', { title, category, deadline });
 
     // Calculate hours until deadline
     const now = new Date();
@@ -270,16 +393,27 @@ app.post('/add-task', async (req, res) => {
 
     try {
       const mlResponse = await axios.post("http://127.0.0.1:5000/predict", {
-        category: category || "General",
-        urgency: "Medium",
+        category: category || "Others",
         deadline_hours: hoursUntilDeadline
       });
+
       predictedPriority = mlResponse.data.priority || "Medium";
+      console.log("✅ ML Predicted Priority:", predictedPriority);
+
     } catch (mlErr) {
-      console.warn("⚠️ ML Server not reachable, using fallback priority");
+      console.warn("⚠️ ML Server not reachable, using fallback");
+      
+      // Simple fallback based on deadline only
+      if (hoursUntilDeadline < 24) {
+        predictedPriority = "High";
+      } else if (hoursUntilDeadline < 72) {
+        predictedPriority = "Medium";
+      } else {
+        predictedPriority = "Low";
+      }
     }
 
-    // Insert into DB without coordinates
+    // Insert into DB - NO URGENCY
     db.query(
       `INSERT INTO tasks 
        (user_id, title, category, remarks, origin, location, deadline, priority, complete) 
@@ -314,14 +448,16 @@ app.post('/add-task', async (req, res) => {
   }
 });
 
-// REMOVE the coordinates update route entirely
-
-// UPDATE TASK ROUTE - SIMPLIFIED (no coordinates)
+// UPDATE TASK ROUTE - NO URGENCY
 app.put('/tasks/:id', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
 
   try {
     const { title, category, remarks, origin, destination, deadline } = req.body;
+
+    console.log('📝 Edit Task Request:', { 
+      title, category, deadline 
+    });
 
     // Calculate hours until deadline
     const now = new Date();
@@ -333,16 +469,29 @@ app.put('/tasks/:id', async (req, res) => {
 
     try {
       const mlResponse = await axios.post("http://127.0.0.1:5000/predict", {
-        category: category || "General",
-        urgency: "Medium",
+        category: category || "Others",
         deadline_hours: hoursUntilDeadline
       });
+
       predictedPriority = mlResponse.data.priority || "Medium";
+      console.log("✅ ML Recalculated Priority:", predictedPriority);
+      
     } catch (mlErr) {
-      console.warn("⚠️ ML Server not reachable, using existing priority");
+      console.warn("⚠️ ML Server not reachable, using fallback priority");
+      
+      // Simple fallback based on deadline only
+      if (hoursUntilDeadline < 24) {
+        predictedPriority = "High";
+      } else if (hoursUntilDeadline < 72) {
+        predictedPriority = "Medium";
+      } else {
+        predictedPriority = "Low";
+      }
+      
+      console.log("🔄 Fallback priority:", predictedPriority);
     }
 
-    // Update without coordinates
+    // Update without urgency
     db.query(
       `UPDATE tasks 
        SET title=?, category=?, remarks=?, origin=?, location=?, deadline=?, priority=?
@@ -363,7 +512,10 @@ app.put('/tasks/:id', async (req, res) => {
           console.error("DB Update Error:", err);
           return res.status(500).json({ error: "Database error" });
         }
-        res.json({ success: true, newPriority: predictedPriority });
+        res.json({ 
+          success: true, 
+          newPriority: predictedPriority
+        });
       }
     );
 
@@ -373,7 +525,7 @@ app.put('/tasks/:id', async (req, res) => {
   }
 });
 
-// delete task
+// Delete task
 app.delete('/tasks/:id', (req, res) => {
   db.query(
     "DELETE FROM tasks WHERE task_id=? AND user_id=?",
@@ -388,13 +540,13 @@ app.delete('/tasks/:id', (req, res) => {
   );
 }); 
 
-//logout
+// Logout
 app.get('/logout', (req, res) => {
   req.session.destroy();
   res.send('Logged out!');
 });
 
-//start server
+// Start server
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });

@@ -366,35 +366,251 @@ a:hover {
   margin-top: 1.5rem;
 }
 
+/* Task Bar Styles - MOVED FROM SCRIPT.JS */
 .task-bar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-radius: 10px;
-  background: white;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-  margin: 1rem 0;
-  width: 100%;
-  max-width: 800px;
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  align-items: stretch;
+  padding: 15px;
+  margin: 10px 0;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 6px solid #6c757d;
+  min-height: 100px;
 }
 
-.task-bar.low { border-left: 6px solid #81c784; }
-.task-bar.medium { border-left: 6px solid #ffb74d; }
-.task-bar.high { border-left: 6px solid #e57373; }
+.task-bar.high {
+  border-left-color: #dc3545;
+}
+
+.task-bar.medium {
+  border-left-color: #ffc107;
+}
+
+.task-bar.low {
+  border-left-color: #28a745;
+}
+
+.task-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-info strong {
+  display: block;
+  font-size: 1.2em;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.task-priority {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-bottom: 8px;
+  width: fit-content;
+}
+
+.task-priority.high {
+  background: #ffe5e5;
+  color: #dc3545;
+}
+
+.task-priority.medium {
+  background: #fff4e5;
+  color: #ff9800;
+}
+
+.task-priority.low {
+  background: #e5f5e5;
+  color: #28a745;
+}
+
+.meta {
+  font-size: 0.9em;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta span {
+  display: block;
+}
+
+.task-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 15px;
+  justify-content: center;
+}
 
 .task-actions button {
-  background: none;
+  padding: 10px;
   border: none;
-  font-size: 16px;
-  margin: 0 5px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: transform 0.2s;
+  font-size: 1.2em;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background: none;
+  margin: 0;
 }
 
 .task-actions button:hover {
-  transform: scale(1.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.task-actions button:active {
+  transform: translateY(0);
+}
+
+.route-btn {
+  background: #28a745 !important;
+  color: white;
+}
+
+.route-btn:hover {
+  background: #218838 !important;
+}
+
+.edit-btn {
+  background: #17a2b8 !important;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #138496 !important;
+}
+
+.complete-btn {
+  background: #28a745 !important;
+  color: white;
+}
+
+.complete-btn:hover {
+  background: #218838 !important;
+}
+
+.delete-btn {
+  background: #dc3545 !important;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #c82333 !important;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  background: #28a745;
+  color: white;
+  border-radius: 4px;
+  transform: translateX(400px);
+  transition: transform 0.3s ease;
+  z-index: 10000;
+}
+
+.notification.show {
+  transform: translateX(0);
+}
+
+.notification.error {
+  background: #dc3545;
+}
+
+.no-tasks {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
+}
+
+.saved-route {
+  background: #d4edda;
+  color: #155724;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-top: 5px;
+  display: inline-block;
+}
+
+/* Modal form styles */
+.task-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.task-form-grid label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #333;
+}
+
+.task-form-grid input,
+.task-form-grid textarea,
+.task-form-grid select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.task-form-grid textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.modal-footer {
+  padding: 15px;
+  border-top: 1px solid #eee;
+  text-align: right;
+}
+
+.save-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.save-btn:hover {
+  background: #0056b3;
+}
+
+.save-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.task-bar.fade-out {
+  opacity: 0;
+  transform: translateX(-50px);
 }
 
 /* Delete Confirmation Modal */
@@ -475,11 +691,6 @@ a:hover {
   background: #888;
 }
 
-.task-bar.fade-out {
-  opacity: 0;
-  transform: translateX(-50px);
-}
-
 /* Incorrect password error message */
 .error {
   color: red;
@@ -523,18 +734,4 @@ a:hover {
 
 .task-marker {
   font-size: 20px;
-}
-
-/* Route button in task actions */
-.route-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  margin: 0 5px;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.route-btn:hover {
-  transform: scale(1.2);
 }

@@ -55,8 +55,14 @@
                     </div>
 
                     <div>
-                    <label for="taskCategory">Category:</label>
-                    <input type="text" id="taskCategory" name="category" required>
+                        <label for="taskCategory">Category:</label>
+                        <select id="taskCategory" name="category" required>
+                            <option value="">--Select Category--</option>
+                            <option value="Bills">Bills</option>
+                            <option value="Groceries">Groceries</option>
+                            <option value="Delivery">Delivery</option>
+                            <option value="Others">Others</option>
+                        </select>
                     </div>
 
                     <div class="full-width">
@@ -104,5 +110,7 @@
             </div>
         </div>
     
+        <!--Map Modal for Route Selection-->
+        
     </body>
 </html>
