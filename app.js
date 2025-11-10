@@ -183,6 +183,19 @@ app.post('/tasks/:id/route', (req, res) => {
 
     const { origin, destination, originLat, originLon, destLat, destLon, distance, duration } = req.body;
     
+    console.log('Saving route data:', {
+      taskId: req.params.id,
+      origin, destination,
+      originLat, originLon,
+      destLat, destLon,
+      distance, duration
+    });
+
+    //validate required fields
+    if(!origin || !destination || !originLat || !destLat || !destLon){
+      return res.status(400).json({ error: "Missing required data" });
+    }
+
     db.query(
         `UPDATE tasks 
          SET route_origin=?, route_destination=?, 
@@ -192,9 +205,9 @@ app.post('/tasks/:id/route', (req, res) => {
          WHERE task_id=? AND user_id=?`,
         [
             origin, destination,
-            originLat, originLon,
-            destLat, destLon,
-            distance, duration,
+            parseFloat(originLat), parseFloat(originLon),
+            parseFloat(destLat), parseFloat(destLon),
+            parseFloat(distance), parseFloat(duration),
             req.params.id, req.session.user.user_id
         ],
         (err, result) => {
@@ -202,6 +215,7 @@ app.post('/tasks/:id/route', (req, res) => {
                 console.error("Route Save Error:", err);
                 return res.status(500).json({ error: "Error saving route" });
             }
+            console.log('Route saved successfully for task:', req.params.id);
             res.json({ success: true });
         }
     );
@@ -226,11 +240,13 @@ app.get('/tasks/:id/route', (req, res) => {
         }
         
         if (results.length > 0 && results[0].route_origin) {
-            res.json({ 
+          console.log('Found saved route for task:', req.params.id);
+          res.json({ 
                 success: true, 
                 route: results[0] 
             });
         } else {
+            console.log('No saved route for task:', req.params.id);
             res.json({ 
                 success: false, 
                 message: "No route saved" 

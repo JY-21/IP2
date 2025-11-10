@@ -64,44 +64,49 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function renderTasks(tasks) {
-        taskList.innerHTML = "";
-        
-        if (!tasks || tasks.length === 0) {
-            taskList.innerHTML = '<div class="no-tasks">No tasks yet. Create your first task!</div>';
-            return;
-        }
-        
-        tasks.forEach(task => {
-            const priority = task.priority ? String(task.priority).toLowerCase() : 'medium';
-            const hasRoute = task.route_origin && task.route_destination;
-            
-            const div = document.createElement("div");
-            div.className = `task-bar ${priority}`;
-            
-            div.innerHTML = `
-                <div class="task-info">
-                    <strong>${escapeHtml(task.title)}</strong>
-                    <span class="task-priority ${priority}">${getPriorityLabel(priority)}</span>
-                    <div class="meta">
-                        <span class="category">📁 ${escapeHtml(task.category)}</span>
-                        <span class="deadline">📅 ${formatDateForDisplay(task.deadline)}</span>
-                        <span class="origin">📍 ${escapeHtml(task.origin)}</span>
-                        ${task.destination ? `<span class="destination">🎯 ${escapeHtml(task.destination)}</span>` : ''}
-                        ${task.remarks ? `<span class="remarks">💡 ${escapeHtml(task.remarks)}</span>` : ''}
-                        ${hasRoute ? `<span class="saved-route">🗺️ Route Saved (${task.route_distance} km, ${Math.round(task.route_duration / 60)} min)</span>` : ''}
-                    </div>
-                </div>
-                <div class="task-actions">
-                    <button class="route-btn" data-id="${task.id}" title="Plan Route">🗺️</button>
-                    <button class="edit-btn" data-id="${task.id}" title="Edit Task">✏️</button>
-                    <button class="complete-btn" data-id="${task.id}" title="Mark Complete">✔️</button>
-                    <button class="delete-btn" data-id="${task.id}" title="Delete Task">🗑️</button>
-                </div>
-            `;
-            taskList.appendChild(div);
-        });
+   function renderTasks(tasks) {
+    taskList.innerHTML = "";
+    
+    if (!tasks || tasks.length === 0) {
+        taskList.innerHTML = '<div class="no-tasks">No tasks yet. Create your first task!</div>';
+        return;
     }
+    
+    tasks.forEach(task => {
+        const priority = task.priority ? String(task.priority).toLowerCase() : 'medium';
+        const hasRoute = task.route_origin && task.route_destination;
+        
+        const div = document.createElement("div");
+        div.className = `task-bar ${priority}`;
+        
+        div.innerHTML = `
+            <div class="task-info">
+                <strong>${escapeHtml(task.title)}</strong>
+                <span class="task-priority ${priority}">${getPriorityLabel(priority)}</span>
+                <div class="meta">
+                    <span class="category">📁 ${escapeHtml(task.category)}</span>
+                    <span class="deadline">📅 ${formatDateForDisplay(task.deadline)}</span>
+                    <span class="origin">📍 ${escapeHtml(task.origin)}</span>
+                    ${task.destination ? `<span class="destination">🎯 ${escapeHtml(task.destination)}</span>` : ''}
+                    ${task.remarks ? `<span class="remarks">💡 ${escapeHtml(task.remarks)}</span>` : ''}
+                    ${hasRoute ? `
+                        <div class="saved-route-info">
+                            <span class="saved-route">🗺️ Route Saved</span>
+                            <span class="route-details">${task.route_distance} km • ${Math.round(task.route_duration / 60)} min</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="task-actions">
+                <button class="route-btn" data-id="${task.id}" title="Plan Route">🗺️</button>
+                <button class="edit-btn" data-id="${task.id}" title="Edit Task">✏️</button>
+                <button class="complete-btn" data-id="${task.id}" title="Mark Complete">✔️</button>
+                <button class="delete-btn" data-id="${task.id}" title="Delete Task">🗑️</button>
+            </div>
+        `;
+        taskList.appendChild(div);
+    });
+}
 
     // Map Modal Functions
     function initMapModal() {
@@ -332,8 +337,8 @@ document.addEventListener("DOMContentLoaded", () => {
         routeLayer = L.geoJSON(route.geometry, {
             style: {
                 color: '#2e7d32',
-                weight: 5,
-                opacity: 0.7
+                weight: 6,
+                opacity: 0.8
             }
         }).addTo(map);
 
@@ -348,7 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
             destLat: destLatLng.lat,
             destLon: destLatLng.lng,
             distance: distance,
-            duration: duration
+            duration: duration * 60//convert to seconds for storage
         };
 
         // Update route info display
@@ -370,7 +375,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(currentRoute)
             });
 
+            const result = await res.json();
+
             if (res.ok) {
+                console.log('Route saved successfully');
                 showNotification('Route saved successfully!', 'success');
                 closeMapModalHandler();
                 await loadTasks(); // Refresh tasks to show saved route
@@ -385,12 +393,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadExistingRoute(taskId) {
         try {
+            console.log('Loading exisiting route for task:', taskId);
             const res = await fetch(`/tasks/${taskId}/route`);
             const data = await res.json();
             
             if (data.success && data.route) {
                 const route = data.route;
-                
+                console.log('Found existing route:', route);
+
                 // Set origin
                 if (route.route_origin_lat && route.route_origin_lon) {
                     setOriginLocation(route.route_origin_lat, route.route_origin_lon);
@@ -410,7 +420,26 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.getElementById('selectedOrigin').textContent = route.route_origin;
                     document.getElementById('selectedDestination').textContent = route.route_destination;
                     routeInfo.style.display = 'block';
+
+                    //Recreate the route on the map
+                    if(originMarker && destinationMarker){
+                        const originLatLng = originMarker.getLatLng();
+                        const destLatLng = destinationMarker.getLatLng();
+                        const routeCoords = `${originLatLng.lng},${originLatLng.lat};${destLatLng.lng},${destLatLng.lat}`;
+
+                        //Regenerate the route display
+                        const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${routeCoords}?overview=full&geometries=geojson`);
+
+                        const routeData = await response.json();
+
+                        if(routeData.code === "Ok" && routeData.routes && routeData.routes.length > 0){
+                            displayRoute(routeData.routes[0], originLatLng, destLatLng);
+                            saveRoute.disabled = false;
+                        }
+                    }
                 }
+            } else {
+                console.log('No existing route found');
             }
         } catch (error) {
             console.error('Error loading existing route:', error);
