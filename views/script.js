@@ -30,6 +30,75 @@ document.addEventListener("DOMContentLoaded", () => {
     let originMarker = null;
     let destinationMarker = null;
     let currentRoute = null;
+    let searchTimeout = null;
+    let currentSearchType = null;
+
+    // Add this function to check session status
+async function checkSession() {
+    try {
+        const res = await fetch('/api/session-check');
+        const data = await res.json();
+        console.log('🔐 Session check:', data);
+        return data.user !== undefined;
+    } catch (error) {
+        console.error('Session check failed:', error);
+        return false;
+    }
+}
+
+// Update your saveRouteHandler to check session first
+async function saveRouteHandler() {
+    if (!currentRoute || !currentTaskId) {
+        showNotification('No route to save. Please generate a route first.', 'error');
+        return;
+    }
+
+    console.log('Attempting to save route for task:', currentTaskId);
+
+    // Check session first
+    const hasValidSession = await checkSession();
+    if (!hasValidSession) {
+        showNotification('Your session has expired. Please log in again.', 'error');
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        // ... rest of your existing saveRouteHandler code ...
+        
+        const res = await fetch(`/tasks/${currentTaskId}/route`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(routeData)
+        });
+
+        console.log(' Response status:', res.status);
+
+        const text = await res.text();
+        console.log('Raw response:', text);
+
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Failed to parse response as JSON:', parseError);
+            throw new Error(`Server returned invalid JSON: ${text.substring(0, 200)}`);
+        }
+
+        console.log('Parsed response:', result);
+        
+        if (result.success) {
+            showNotification('Route saved successfully!', 'success');
+            closeMapModalHandler();
+            await loadTasks();
+        } else {
+            throw new Error(result.error || `Server error: ${res.status}`);
+        }
+    } catch (error) {
+        console.error('Save route error:', error);
+        showNotification(`Failed to save route: ${error.message}`, 'error');
+    }
+}
 
     // Initialize the application
     function init() {
@@ -74,8 +143,10 @@ document.addEventListener("DOMContentLoaded", () => {
     
     tasks.forEach(task => {
         const priority = task.priority ? String(task.priority).toLowerCase() : 'medium';
-        const hasRoute = task.route_origin && task.route_destination;
         
+        // Check if coordinates exist for route
+        const hasRoute = task.origin_lat !== null && task.dest_lat !== null;
+
         const div = document.createElement("div");
         div.className = `task-bar ${priority}`;
         
@@ -125,7 +196,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     setDestinationLocation(e.latlng.lat, e.latlng.lng);
                 }
             });
+
+            //fix map display on modal open
+            map.whenReady(function() {
+                console.log('Map is ready');
+            })
         }
+
+        //add search input event listeners for autocomplete
+        originSearch.addEventListener('input', (e) => {
+            currentSearchType = 'origin';
+            handleSearchInput(e.target.value, 'originAutocomplete');
+        });
+
+        destinationSearch.addEventListener('input', (e) => {
+            currentSearchType = 'destination';
+            handleSearchInput(e.target.value, 'destinationAutocomplete');
+        });
+
+        //close autocomplte when clicking outside
+        document.addEventListener('click', (e) => {
+            if(!e.target.closest('.input-with-button')) {
+                hideAllAutocompletes();
+            }
+        });
         
         // Event listeners for map modal
         closeMapModal.addEventListener('click', closeMapModalHandler);
@@ -137,6 +231,150 @@ document.addEventListener("DOMContentLoaded", () => {
         window.addEventListener('click', (e) => {
             if (e.target === mapModal) closeMapModalHandler();
         });
+    }
+
+    function handleSearchInput (query, autocompleteId){
+        const autocomplete = document.getElementById(autocompleteId);
+
+        //clear previous timeout
+        if(searchTimeout){
+            clearTimeout(searchTimeout);
+        }
+
+        //hide autocomplete if query is too short
+        if(query.length < 3){
+            autocomplete.classList.remove('show');
+            return;
+        }
+
+         // Show loading state
+        autocomplete.innerHTML = '<div class="autocomplete-item">Searching...</div>';
+        autocomplete.classList.add('show');
+        
+        // Debounce search
+        searchTimeout = setTimeout(async () => {
+            await performSearch(query, autocompleteId);
+        }, 300);
+    }
+
+    async function performSearch(query, autocompleteId) {
+    try {
+        console.log('🔍 Searching for:', query);
+        
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+            {
+                headers: {
+                    'User-Agent': 'TaskManagerApp/1.0',
+                    'Accept-Language': 'en' // Request English results
+                }
+            }
+        );
+        
+        const data = await response.json();
+        console.log('🔍 Search results:', data);
+        
+        displayAutocompleteResults(data, autocompleteId);
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        const autocomplete = document.getElementById(autocompleteId);
+        autocomplete.innerHTML = '<div class="autocomplete-item">Error searching. Please try again.</div>';
+    }
+}
+
+    function displayAutocompleteResults(results, autocompleteId) {
+        const autocomplete = document.getElementById(autocompleteId);
+        
+        if (!results || results.length === 0) {
+            autocomplete.innerHTML = '<div class="autocomplete-item">No results found</div>';
+            return;
+        }
+        
+        autocomplete.innerHTML = '';
+        
+        results.forEach(result => {
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            item.innerHTML = `
+                <div class="name">${escapeHtml(result.display_name.split(',')[0])}</div>
+                <div class="address">${escapeHtml(result.display_name)}</div>
+            `;
+            
+            item.addEventListener('click', () => {
+                selectAutocompleteResult(result, autocompleteId);
+            });
+            
+            autocomplete.appendChild(item);
+        });
+    }
+
+    function selectAutocompleteResult(result, autocompleteId) {
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        const displayName = result.display_name;
+        
+        if (autocompleteId === 'originAutocomplete') {
+            originSearch.value = displayName;
+            setOriginLocation(lat, lon);
+        } else {
+            destinationSearch.value = displayName;
+            setDestinationLocation(lat, lon);
+        }
+        
+        hideAllAutocompletes();
+        checkRouteReady();
+    }
+
+    function hideAllAutocompletes() {
+        document.querySelectorAll('.search-autocomplete').forEach(ac => {
+            ac.classList.remove('show');
+        });
+    }
+
+    // Improved geocoding function with better error handling
+    async function geocodeAndSetMarker(query, type) {
+        try {
+            console.log('🗺️ Geocoding:', query);
+            
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`,
+                {
+                    headers: {
+                        'User-Agent': 'TaskManagerApp/1.0',
+                        'Accept-Language': 'en'
+                    }
+                }
+            );
+            
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                const displayName = data[0].display_name;
+                
+                console.log('✅ Geocoding successful:', { lat, lon, displayName });
+                
+                if (type === 'origin') {
+                    setOriginLocation(lat, lon);
+                    originSearch.value = displayName;
+                } else {
+                    setDestinationLocation(lat, lon);
+                    destinationSearch.value = displayName;
+                }
+                
+                return true;
+            } else {
+                console.log('❌ No geocoding results for:', query);
+                showNotification(`No results found for "${query}". Try a more specific address.`, 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Geocoding error:', error);
+            showNotification('Error searching for location. Please try again.', 'error');
+            return false;
+        }
     }
 
     function openMapModal(taskId) {
@@ -152,6 +390,14 @@ document.addEventListener("DOMContentLoaded", () => {
         clearMap();
         resetRouteUI();
         mapModal.classList.add("show");
+
+        //Fix map display - wait for map to be visible
+        setTimeout(() => {
+            if(map) {
+               map.invalidateSize();
+               map.setView([51.505, -0.09], 13);
+            }
+        }, 100);
         
         // Load existing route if available
         loadExistingRoute(taskId);
@@ -330,66 +576,121 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function displayRoute(route, originLatLng, destLatLng) {
-        if (routeLayer) {
-            map.removeLayer(routeLayer);
-        }
-
-        routeLayer = L.geoJSON(route.geometry, {
-            style: {
-                color: '#2e7d32',
-                weight: 6,
-                opacity: 0.8
-            }
-        }).addTo(map);
-
-        const distance = (route.distance / 1000).toFixed(1);
-        const duration = Math.round(route.duration / 60);
-
-        currentRoute = {
-            origin: originSearch.value,
-            destination: destinationSearch.value,
-            originLat: originLatLng.lat,
-            originLon: originLatLng.lng,
-            destLat: destLatLng.lat,
-            destLon: destLatLng.lng,
-            distance: distance,
-            duration: duration * 60//convert to seconds for storage
-        };
-
-        // Update route info display
-        document.getElementById('routeDistance').textContent = `${distance} km`;
-        document.getElementById('routeDuration').textContent = `${duration} minutes`;
-        document.getElementById('selectedOrigin').textContent = originSearch.value;
-        document.getElementById('selectedDestination').textContent = destinationSearch.value;
-        
-        routeInfo.style.display = 'block';
+    if (routeLayer) {
+        map.removeLayer(routeLayer);
     }
+
+    routeLayer = L.geoJSON(route.geometry, {
+        style: {
+            color: '#2e7d32',
+            weight: 6,
+            opacity: 0.8
+        }
+    }).addTo(map);
+
+    const distance = (route.distance / 1000).toFixed(1);
+    const duration = Math.round(route.duration / 60);
+    
+
+    currentRoute = {
+        origin: originSearch.value,
+        destination: destinationSearch.value,
+        originLat: originLatLng.lat,
+        originLon: originLatLng.lng,
+        destLat: destLatLng.lat,
+        destLon: destLatLng.lng,
+        distance: distance,
+        duration: duration * 60 // Convert to seconds for storage
+    };
+
+    console.log('Route details for saving:', currentRoute);
+
+    // Update route info display with smooth animation
+    document.getElementById('routeDistance').textContent = `${distance} km`;
+    document.getElementById('routeDuration').textContent = `${duration} minutes`;
+    document.getElementById('selectedOrigin').textContent = originSearch.value || 'Selected location';
+    document.getElementById('selectedDestination').textContent = destinationSearch.value || 'Selected location';
+    
+    // Smooth show animation
+    const routeInfo = document.getElementById('routeInfo');
+    routeInfo.style.display = 'block';
+    routeInfo.classList.add('show');
+    
+    saveRoute.disabled = false;
+    
+    // Auto-scroll to show route info
+    setTimeout(() => {
+        routeInfo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 400);
+}
 
     async function saveRouteHandler() {
-        if (!currentRoute || !currentTaskId) return;
-
-        try {
-            const res = await fetch(`/tasks/${currentTaskId}/route`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(currentRoute)
-            });
-
-            const result = await res.json();
-
-            if (res.ok) {
-                console.log('Route saved successfully');
-                showNotification('Route saved successfully!', 'success');
-                closeMapModalHandler();
-                await loadTasks(); // Refresh tasks to show saved route
-            } else {
-                throw new Error('Failed to save route');
-            }
-        } catch (error) {
-            console.error('Error saving route:', error);
-            showNotification('Error saving route', 'error');
-        }
+    if (!currentRoute || !currentTaskId) {
+        showNotification('No route to save. Please generate a route first.', 'error');
+        return;
     }
+
+    console.log('Attempting to save route...');
+    console.log('Route data:', currentRoute);
+
+    try {
+        // Validate all required fields
+        const requiredFields = ['originLat', 'originLon', 'destLat', 'destLon'];
+        const missingFields = requiredFields.filter(field => !currentRoute[field]);
+        
+        if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+
+        const routeData = {
+            originLat: parseFloat(currentRoute.originLat),
+            originLon: parseFloat(currentRoute.originLon),
+            destLat: parseFloat(currentRoute.destLat),
+            destLon: parseFloat(currentRoute.destLon),
+            distance: parseFloat(currentRoute.distance) || 0,
+            duration: parseFloat(currentRoute.duration) || 0
+        };
+
+        console.log('Sending to server:', routeData);
+
+        const res = await fetch(`/tasks/${currentTaskId}/route`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(routeData)
+        });
+
+        console.log('Response status:', res.status);
+        console.log('Response headers:', res.headers);
+
+        //Check if response is HTML (error page)
+        const contentType = res.headers.get('content-type');
+        if(!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('Server returned non-JSON response:', text.substring(0, 500));
+
+            //Check for common HTML error patterns
+            if(text.includes('<!DOCTYPE') || text.includes('<html')){
+                throw new Error('Server returned HTML error page. Check server logs.');
+            } else {
+                throw new Error(`Server returned: ${text.substring(0, 200)}`);
+            }
+        }
+
+        const result = await res.json();
+        console.log('Response data:', result);
+        
+        if (res.ok && result.success) {
+            showNotification('✅ Route saved successfully!', 'success');
+            closeMapModalHandler();
+            await loadTasks();
+        } else {
+            throw new Error(result.error || `Server error: ${res.status}`);
+        }
+    } catch (error) {
+        console.error('Save route error:', error);
+        showNotification(`Failed to save route: ${error.message}`, 'error');
+    }
+}
 
     async function loadExistingRoute(taskId) {
         try {

@@ -14,9 +14,7 @@
         <aside class="side-menu">
             <div class="side-container">
                 <ul>
-                    <li><button onClick="newTask()">New Task</button></li>
-                    <li><button onClick="deleteTask()">Delete Task</button></li>
-                    <li><button onClick="editTask()">Edit Task</button></li>
+                  
                 </ul>
             </div>
         </aside>
@@ -35,16 +33,11 @@
             </div>
 
             <!--Filter Controls-->
-            <div class="filter-controls">
-
-
-            </div>
+            <div class="filter-controls"></div>
 
 
             <!--Task list container-->
-            <div id="taskList" class="task-list">
-
-            </div>
+            <div id="taskList" class="task-list"></div>
         </main>
 
         <div id="taskModal" class="modal">
@@ -119,7 +112,7 @@
             </div>
         </div>
     
-                <!-- Map Modal for Route Selection -->
+            <!-- Map Modal for Route Selection -->
         <div id="mapModal" class="modal">
             <div class="modal-content map-modal-content">
                 <div class="modal-header">
@@ -127,49 +120,63 @@
                     <h2>Plan Your Route</h2>
                 </div>
                 <div class="modal-body map-modal-body">
-                    <div class="map-controls">
-                        <div class="location-inputs">
-                            <div class="input-group">
-                                <label for="originSearch">📍 Origin:</label>
-                                <div class="input-with-button">
-                                    <input type="text" id="originSearch" placeholder="Enter origin address or click on map...">
-                                    <button id="useCurrentLocation" class="current-location-btn" title="Use Current Location">📍</button>
+                    <!-- Scrollable Controls -->
+                    <div class="map-controls-container">
+                        <div class="map-controls">
+                            <div class="location-inputs">
+                                <div class="input-group">
+                                    <label for="originSearch">📍 Origin:</label>
+                                    <div class="input-with-button">
+                                        <input type="text" id="originSearch" placeholder="Enter origin address or click on map...">
+                                        <div id="originAutocomplete" class="search-autocomplete"></div>
+                                        <button id="useCurrentLocation" class="current-location-btn" title="Use Current Location">📍</button>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="destinationSearch">🎯 Destination:</label>
+                                    <div class="input-with-button">
+                                        <input type="text" id="destinationSearch" placeholder="Enter destination address or click on map...">
+                                        <div id="destinationAutocomplete" class="search-autocomplete"></div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="input-group">
-                                <label for="destinationSearch">🎯 Destination:</label>
-                                <input type="text" id="destinationSearch" placeholder="Enter destination address or click on map...">
+                            <div class="map-buttons">
+                                <button id="searchLocations" class="search-btn">🔍 Search Locations</button>
+                                <button id="generateRoute" class="route-btn" disabled>🚗 Generate Route</button>
+                                <button id="saveRoute" class="save-btn" disabled>💾 Save Route</button>
                             </div>
-                        </div>
-                        <div class="map-buttons">
-                            <button id="searchLocations" class="search-btn">🔍 Search Locations</button>
-                            <button id="generateRoute" class="route-btn" disabled>🚗 Generate Route</button>
-                            <button id="saveRoute" class="save-btn" disabled>💾 Save Route</button>
                         </div>
                     </div>
                     
-                    <div class="map-container">
-                        <div id="routeMap" class="route-map"></div>
-                    </div>
-                    
-                    <div id="routeInfo" class="route-info" style="display: none;">
-                        <h3>📊 Route Information</h3>
-                        <div class="route-details">
-                            <div class="route-detail">
-                                <strong>Distance:</strong> 
-                                <span id="routeDistance">-</span>
-                            </div>
-                            <div class="route-detail">
-                                <strong>Estimated Time:</strong> 
-                                <span id="routeDuration">-</span>
-                            </div>
-                            <div class="route-detail">
-                                <strong>Origin:</strong> 
-                                <span id="selectedOrigin">-</span>
-                            </div>
-                            <div class="route-detail">
-                                <strong>Destination:</strong> 
-                                <span id="selectedDestination">-</span>
+                    <!-- Map and Route Info Container -->
+                    <div class="map-and-route-container">
+                        <!-- Map -->
+                        <div class="map-container">
+                            <div id="routeMap" class="route-map"></div>
+                        </div>
+                        
+                        <!-- Scrollable Route Info -->
+                        <div class="route-info-container">
+                            <div id="routeInfo" class="route-info" style="display: none;">
+                                <h3>📊 Route Information</h3>
+                                <div class="route-details">
+                                    <div class="route-detail">
+                                        <strong>Distance:</strong> 
+                                        <span id="routeDistance">-</span>
+                                    </div>
+                                    <div class="route-detail">
+                                        <strong>Estimated Time:</strong> 
+                                        <span id="routeDuration">-</span>
+                                    </div>
+                                    <div class="route-detail">
+                                        <strong>Origin:</strong> 
+                                        <span id="selectedOrigin">-</span>
+                                    </div>
+                                    <div class="route-detail">
+                                        <strong>Destination:</strong> 
+                                        <span id="selectedDestination">-</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

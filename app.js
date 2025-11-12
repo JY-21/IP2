@@ -12,6 +12,121 @@ const axios = require("axios");
 
 const OPENROUTE_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjllMzhmNmVjZDgwODQwM2U5YWM0NmNkNGNkZjgwOWJiIiwiaCI6Im11cm11cjY0In0=';
 
+// Middleware
+app.use(session({
+    secret: 'secret_key', 
+    resave: false,
+    saveUninitialized: true
+}));
+
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json());
+
+// Serve static files
+app.use(express.static(path.join(__dirname, "views")));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// Session debugging middleware
+app.use((req, res, next) => {
+    console.log('   Session Debug:');
+    console.log('   Session ID:', req.sessionID);
+    console.log('   User in session:', req.session.user);
+    console.log('   Session keys:', Object.keys(req.session));
+    next();
+});
+
+// MySQL pool
+const db = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'erruns_db',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+db.on('error', (err) => {
+  console.error('⚠️ MySQL Pool Error:', err.code);
+});
+
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error('MySQL connection failed:', err);
+  } else {
+    console.log('MySQL connected!');
+    connection.release();
+  }
+});
+
+// Routes
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "views", "index.html"));
+});
+
+app.get("/login", (req, res) => {
+  res.sendFile(path.join(__dirname, "views", "login_page.html"));
+});
+
+app.get("/signup", (req, res) => {
+  res.sendFile(path.join(__dirname, "views", "sign_up_page.html"));
+});
+
+// Handle sign up
+app.post("/signup", (req, res) => {
+  const { first_name, last_name, email, username, password } = req.body;
+
+  const hashedPassword = bcrypt.hashSync(password, 10);
+
+  db.query(
+    "INSERT INTO users (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)",
+    [first_name, last_name, email, username, hashedPassword],
+    (err, result) => {
+      if (err) throw err;
+      res.redirect("/login");
+    }
+  );
+});
+
+// Handle login
+app.post("/login", (req, res) => {
+  const { username, password } = req.body || {};
+
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: "Missing username or password" });
+  }
+
+  db.query("SELECT * FROM users WHERE username = ?", [username], (err, results) => {
+    if (err) {
+      console.error("Login DB Error:", err);
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
+
+    if (results.length === 0) {
+      return res.status(401).json({ success: false, message: "User not found!" });
+    }
+
+    const user = results[0];
+    if (bcrypt.compareSync(password, user.password)) {
+      req.session.user = user;
+      return res.json({ success: true });
+    } else {
+      return res.status(401).json({ success: false, message: "Incorrect password!" });
+    }
+  });
+});
+
+app.get('/home', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+
+  res.sendFile(path.join(__dirname, "views", "home.html"));
+});
+
 // Get directions between two points
 app.post('/api/directions', async (req, res) => {
   try {
@@ -177,46 +292,70 @@ app.post("/api/predict-priority", async (req, res) => {
   }
 });
 
-// Store route information for a task
+// Store route information for a task - DEBUG VERSION
 app.post('/tasks/:id/route', (req, res) => {
-    if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
+    console.log('POST /tasks/:id/route called');
+    console.log('Task ID:', req.params.id);
+    console.log('Request body:', req.body);
+    console.log('User session:', req.session.user);
 
-    const { origin, destination, originLat, originLon, destLat, destLon, distance, duration } = req.body;
+    if (!req.session.user) {
+        console.log('Unauthorized - no user session');
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { originLat, originLon, destLat, destLon, distance, duration } = req.body;
     
-    console.log('Saving route data:', {
-      taskId: req.params.id,
-      origin, destination,
-      originLat, originLon,
-      destLat, destLon,
-      distance, duration
-    });
+    console.log('Route data received:');
+    console.log('   Origin:', originLat, originLon);
+    console.log('   Destination:', destLat, destLon);
+    console.log('   Distance:', distance);
+    console.log('   Duration:', duration);
 
-    //validate required fields
-    if(!origin || !destination || !originLat || !destLat || !destLon){
-      return res.status(400).json({ error: "Missing required data" });
+    // Validate coordinates
+    if (!originLat || !originLon || !destLat || !destLon) {
+        console.log('Missing coordinates');
+        return res.status(400).json({ error: "Missing coordinates" });
+    }
+
+    // Validate numeric values
+    if (isNaN(parseFloat(originLat)) || isNaN(parseFloat(originLon)) || 
+        isNaN(parseFloat(destLat)) || isNaN(parseFloat(destLon))) {
+        console.log('Invalid coordinate values');
+        return res.status(400).json({ error: "Invalid coordinate values" });
     }
 
     db.query(
         `UPDATE tasks 
-         SET route_origin=?, route_destination=?, 
-             route_origin_lat=?, route_origin_lon=?,
-             route_dest_lat=?, route_dest_lon=?,
-             route_distance=?, route_duration=?
-         WHERE task_id=? AND user_id=?`,
+         SET origin_lat = ?, origin_lon = ?,
+             dest_lat = ?, dest_lon = ?,
+             route_distance = ?, route_duration = ?
+         WHERE task_id = ? AND user_id = ?`,
         [
-            origin, destination,
             parseFloat(originLat), parseFloat(originLon),
             parseFloat(destLat), parseFloat(destLon),
-            parseFloat(distance), parseFloat(duration),
+            parseFloat(distance), parseInt(duration),
             req.params.id, req.session.user.user_id
         ],
         (err, result) => {
             if (err) {
-                console.error("Route Save Error:", err);
-                return res.status(500).json({ error: "Error saving route" });
+                console.error("Database error:", err);
+                return res.status(500).json({ error: "Database error: " + err.message });
             }
-            console.log('Route saved successfully for task:', req.params.id);
-            res.json({ success: true });
+            
+            console.log('Database result:', result);
+            
+            if (result.affectedRows === 0) {
+                console.log('No task found or no permission');
+                return res.status(404).json({ error: "Task not found" });
+            }
+            
+            console.log('Route saved successfully!');
+            res.json({ 
+                success: true,
+                message: "Route saved successfully",
+                affectedRows: result.affectedRows
+            });
         }
     );
 });
@@ -226,138 +365,31 @@ app.get('/tasks/:id/route', (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: "Unauthorized" });
 
     const sql = `
-        SELECT route_origin, route_destination, 
-               route_origin_lat, route_origin_lon,
-               route_dest_lat, route_dest_lon,
+        SELECT origin, destination, 
+               origin_lat, origin_lon,
+               dest_lat, dest_lon,
                route_distance, route_duration
         FROM tasks 
-        WHERE task_id=? AND user_id=?`;
+        WHERE task_id = ? AND user_id = ?`;
     
     db.query(sql, [req.params.id, req.session.user.user_id], (err, results) => {
         if (err) {
-            console.error("Route Fetch Error:", err);
+            console.error("Route fetch error:", err);
             return res.status(500).json({ error: "Database error" });
         }
         
-        if (results.length > 0 && results[0].route_origin) {
-          console.log('Found saved route for task:', req.params.id);
-          res.json({ 
+        if (results.length > 0 && results[0].origin_lat !== null) {
+            res.json({ 
                 success: true, 
                 route: results[0] 
             });
         } else {
-            console.log('No saved route for task:', req.params.id);
             res.json({ 
                 success: false, 
                 message: "No route saved" 
             });
         }
     });
-});
-
-// Middleware
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.json());
-app.use(session({
-    secret: 'secret_key', 
-    resave: false,
-    saveUninitialized: true
-}));
-
-// Serve static files
-app.use(express.static(path.join(__dirname, "views")));
-app.use(express.static(path.join(__dirname, "public")));
-
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-
-// MySQL pool
-const db = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'erruns_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-db.on('error', (err) => {
-  console.error('⚠️ MySQL Pool Error:', err.code);
-});
-
-db.getConnection((err, connection) => {
-  if (err) {
-    console.error('❌ MySQL connection failed:', err);
-  } else {
-    console.log('✅ MySQL connected!');
-    connection.release();
-  }
-});
-
-// Routes
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "views", "index.html"));
-});
-
-app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "views", "login_page.html"));
-});
-
-app.get("/signup", (req, res) => {
-  res.sendFile(path.join(__dirname, "views", "sign_up_page.html"));
-});
-
-// Handle sign up
-app.post("/signup", (req, res) => {
-  const { first_name, last_name, email, username, password } = req.body;
-
-  const hashedPassword = bcrypt.hashSync(password, 10);
-
-  db.query(
-    "INSERT INTO users (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)",
-    [first_name, last_name, email, username, hashedPassword],
-    (err, result) => {
-      if (err) throw err;
-      res.redirect("/login");
-    }
-  );
-});
-
-// Handle login
-app.post("/login", (req, res) => {
-  const { username, password } = req.body || {};
-
-  if (!username || !password) {
-    return res.status(400).json({ success: false, message: "Missing username or password" });
-  }
-
-  db.query("SELECT * FROM users WHERE username = ?", [username], (err, results) => {
-    if (err) {
-      console.error("Login DB Error:", err);
-      return res.status(500).json({ success: false, message: "Database error" });
-    }
-
-    if (results.length === 0) {
-      return res.status(401).json({ success: false, message: "User not found!" });
-    }
-
-    const user = results[0];
-    if (bcrypt.compareSync(password, user.password)) {
-      req.session.user = user;
-      return res.json({ success: true });
-    } else {
-      return res.status(401).json({ success: false, message: "Incorrect password!" });
-    }
-  });
-});
-
-app.get('/home', (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/login');
-  }
-
-  res.sendFile(path.join(__dirname, "views", "home.html"));
 });
 
 // GET TASKS - NO URGENCY

@@ -202,14 +202,14 @@ a:hover {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 1050;
   background: rgba(0,0,0,0.4);
   justify-content: center;
   align-items: center;
 }
 
 .modal.show {
-  display: flex;
+  display: flex !important;
 }
 
 /* Modal Layout */
@@ -639,12 +639,15 @@ a:hover {
   background: #5a6268;
 }
 
-/* Larger Map Modal Styles */
+/* Larger Map Modal Styles - FIXED */
 .map-modal-content {
     width: 95% !important;
     height: 90% !important;
     max-width: 1200px !important;
     max-height: 900px !important;
+    margin: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
 .map-modal-body {
@@ -652,6 +655,9 @@ a:hover {
     display: flex;
     flex-direction: column;
     padding: 0 !important;
+    min-height: 0;
+    gap: 0;
+    overflow: hidden; /* Prevent scrolling on the body itself */
 }
 
 .map-controls {
@@ -659,6 +665,38 @@ a:hover {
     padding: 20px;
     border-bottom: 1px solid #dee2e6;
     flex-shrink: 0;
+    max-height: 180px; /* Limit controls height */
+    overflow-y: auto; /* Allow scrolling if needed */
+}
+
+.map-controls-container{
+  flex-shrink: 0;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  max-height: 40vh; /*Limit controls height */
+  overflow-y: auto; /*Scrollable controls*/
+}
+
+.map-and-route-container{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.map-container{
+  flex: 1;
+  min-height: 300px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.route-info-container { 
+  flex-shrink: 0;
+  max-height: 30vh;
+  overflow-y: auto;
 }
 
 .location-inputs {
@@ -684,6 +722,7 @@ a:hover {
     display: flex;
     gap: 8px;
     align-items: center;
+    position: relative; /* For autocomplete positioning */
 }
 
 .input-with-button input {
@@ -719,6 +758,7 @@ a:hover {
     font-weight: 500;
     transition: all 0.2s;
     width: auto !important;
+    margin: 0 !important; /* Remove default margins */
 }
 
 .current-location-btn {
@@ -774,76 +814,149 @@ a:hover {
     transform: none;
 }
 
-/* Map Container */
+/* Map Container - FIXED HEIGHT */
 .map-container {
     flex: 1;
-    min-height: 400px;
-    padding: 0;
+    min-height: 300px;
+    max-height: 50vh; /* Reduced to make room for route info */
     position: relative;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    margin: 0; /* Remove any margins */
 }
 
 .route-map {
     width: 100%;
     height: 100%;
     border: none;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
-/* Route Info Styles */
+/* Route Info Styles - FIXED VISIBILITY */
 .route-info {
     background: #e8f5e9;
-    padding: 20px;
-    border-top: 1px solid #c8e6c9;
+    padding: 15px 20px;
+    border-top: 2px solid #2e7d32;
     flex-shrink: 0;
+    max-height: 200px; /* Limit height */
+    overflow-y: auto; /* Allow scrolling if content is long */
+    display: none; /* Start hidden */
+    animation: slideInUp 0.3s ease;
+}
+
+.route-info.show {
+    display: block !important;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .route-info h3 {
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     color: #2e7d32;
     font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.route-info h3::before {
+    content: "📊";
+    font-size: 1.1em;
 }
 
 .route-details {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 15px;
 }
 
-.route-details {
-    background: #e2f3e5;
-    color: #0f5132;
-    padding: 3px 6px;
-    border-radius: 3px;
-    font-size: 0.75em;
-    display: inline-block;
-    width: fit-content;
+.route-detail {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #2e7d32;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .route-detail strong {
     color: #555;
     display: block;
     font-size: 0.9em;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
 }
 
 .route-detail span {
     color: #333;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1em;
 }
 
-/* Map marker popup styles */
-.leaflet-popup-content {
-    font-family: Arial, sans-serif;
+/* Search Autocomplete Styles */
+.search-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-.leaflet-popup-content strong {
-    color: #2e7d32;
+.search-autocomplete.show {
+    display: block;
 }
 
+.autocomplete-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.autocomplete-item:hover {
+    background: #f8f9fa;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item .name {
+    font-weight: bold;
+    margin-bottom: 3px;
+    color: #333;
+}
+
+.autocomplete-item .address {
+    font-size: 0.85em;
+    color: #666;
+    line-height: 1.3;
+}
+
+/* Saved route display in task list */
 .saved-route-info {
     margin-top: 8px;
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .saved-route {
@@ -852,6 +965,78 @@ a:hover {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.8em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.route-details-small {
+    background: #e2f3e5;
+    color: #0f5132;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
     display: inline-block;
-    width: fit-content;
+}
+
+/* Ensure map controls are visible */
+.leaflet-top, .leaflet-bottom {
+    z-index: 1000;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .map-modal-content {
+        width: 98% !important;
+        height: 95% !important;
+        margin: 10px;
+    }
+    
+    .location-inputs {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+    
+    .map-buttons {
+        flex-direction: column;
+    }
+    
+    .map-buttons button {
+        width: 100% !important;
+    }
+    
+    .route-details {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .map-container {
+        max-height: 45vh; /* Even smaller on mobile */
+    }
+    
+    .route-info {
+        max-height: 150px;
+        padding: 12px 15px;
+    }
+}
+
+/* Fix for task bar route info */
+.task-bar .saved-route-info {
+    margin-top: 6px;
+}
+
+.task-bar .saved-route {
+    background: #d4edda;
+    color: #155724;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
+}
+
+.task-bar .route-details-small {
+    background: #e2f3e5;
+    color: #0f5132;
+    padding: 2px 5px;
+    border-radius: 2px;
+    font-size: 0.7em;
 }
