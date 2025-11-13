@@ -292,12 +292,11 @@ app.post("/api/predict-priority", async (req, res) => {
   }
 });
 
-// Store route information for a task - DEBUG VERSION
+// Store route information for a task - IMPROVED VERSION
 app.post('/tasks/:id/route', (req, res) => {
     console.log('POST /tasks/:id/route called');
     console.log('Task ID:', req.params.id);
     console.log('Request body:', req.body);
-    console.log('User session:', req.session.user);
 
     if (!req.session.user) {
         console.log('Unauthorized - no user session');
@@ -392,7 +391,7 @@ app.get('/tasks/:id/route', (req, res) => {
     });
 });
 
-// GET TASKS - NO URGENCY
+// GET TASKS - FIXED VERSION
 app.get('/tasks', (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -408,7 +407,13 @@ app.get('/tasks', (req, res) => {
       location AS destination,
       deadline, 
       priority, 
-      complete
+      complete,
+      origin_lat,
+      origin_lon,
+      dest_lat, 
+      dest_lon,
+      route_distance,
+      route_duration
     FROM tasks
     WHERE user_id = ?
   `;
@@ -418,6 +423,21 @@ app.get('/tasks', (req, res) => {
       console.error("DB Fetch Error:", err);
       return res.status(500).json({ error: "Database error" });
     }
+    
+    // Debug: Log what we're getting from database
+    console.log('📋 TASKS FROM DATABASE:');
+    results.forEach(task => {
+      console.log(`   Task ${task.id} "${task.title}":`, {
+        origin_lat: task.origin_lat,
+        origin_lon: task.origin_lon,
+        dest_lat: task.dest_lat,
+        dest_lon: task.dest_lon,
+        route_distance: task.route_distance,
+        route_duration: task.route_duration,
+        hasRoute: !!(task.origin_lat && task.dest_lat)
+      });
+    });
+    
     res.json(results);
   });
 });
