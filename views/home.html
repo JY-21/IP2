@@ -9,6 +9,7 @@
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     </head>
     <script src="script.js"></script>
+    
     <body>
         <!--Side menu-->
         <aside class="side-menu">
@@ -62,7 +63,7 @@
 
         <main class="main-content">
             <div class="content-header">
-                <h1>Current Tasks</h1>
+                <h1>Current Tasks:</h1>
                 <button id="newTaskBtn" class="new-task-btn">+ New Task</button>
             </div>
 
@@ -179,8 +180,8 @@
                             </div>
                             <div class="map-buttons">
                                 <button id="searchLocations" class="search-btn">🔍 Search Locations</button>
-                                <button id="generateRoute" class="route-btn" disabled>🚗 Generate Route</button>
-                                <button id="saveRoute" class="save-btn" disabled>💾 Save Route</button>
+                                <button id="generateRoute" class="map-route-btn" disabled>🚗 Generate Route</button>
+                                <button id="saveRoute" class="map-save-btn" disabled>💾 Save Route</button>
                             </div>
                         </div>
                     </div>
@@ -201,14 +202,6 @@
                                     <div class="route-detail">
                                         <strong>Estimated Time:</strong> 
                                         <span id="routeDuration">-</span>
-                                    </div>
-                                    <div class="route-detail">
-                                        <strong>Origin:</strong> 
-                                        <span id="selectedOrigin">-</span>
-                                    </div>
-                                    <div class="route-detail">
-                                        <strong>Destination:</strong> 
-                                        <span id="selectedDestination">-</span>
                                     </div>
                                 </div>
                             </div>

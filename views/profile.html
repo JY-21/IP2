@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .card {
+      max-width: 400px;
+      margin: 40px auto;
+      padding: 20px;
+      border-radius: 12px;
+      background: #f9f9f9;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .card-body input {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .btn-save { background: #4CAF50; color: white; margin-bottom: 10px; }
+    .btn-delete { background: #e74c3c; color: white; }
+
+    .card-footer {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .error {
+      color: red;
+      text-align: center;
+    }
+
+    .success {
+      color: green;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">My Profile</div>
+    <div class="card-body">
+      <form id="profileForm">
+        <input type="text" id="first_name" name="first_name" placeholder="First Name" required>
+        <input type="text" id="last_name" name="last_name" placeholder="Last Name" required>
+        <input type="email" id="email" name="email" placeholder="Email" required>
+        <input type="text" id="username" name="username" placeholder="Username" required>
+        <input type="password" id="password" name="password" placeholder="New Password (optional)">
+        <button type="submit" class="btn btn-save">Save Changes</button>
+      </form>
+
+      <button id="deleteBtn" class="btn btn-delete">Delete Account</button>
+
+      <p id="message"></p>
+    </div>
+    <div class="card-footer">
+      <a href="/home">⬅ Back to Home</a>
+    </div>
+  </div>
+
+  <script>
+    // Fetch user data
+    async function loadProfile() {
+      try {
+        const res = await fetch("/api/profile");
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("first_name").value = data.first_name;
+          document.getElementById("last_name").value = data.last_name;
+          document.getElementById("email").value = data.email;
+          document.getElementById("username").value = data.username;
+        } else {
+          document.getElementById("message").innerText = data.error || "Failed to load profile.";
+        }
+      } catch (err) {
+        document.getElementById("message").innerText = "Error loading profile.";
+      }
+    }
+
+    // Update profile
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const result = await res.json();
+        const msg = document.getElementById("message");
+        if (res.ok) {
+          msg.innerText = "✅ Profile updated successfully.";
+          msg.className = "success";
+        } else {
+          msg.innerText = result.error || "Update failed.";
+          msg.className = "error";
+        }
+      } catch (err) {
+        document.getElementById("message").innerText = "Error updating profile.";
+      }
+    });
+
+    // Delete account
+    document.getElementById("deleteBtn").addEventListener("click", async () => {
+      if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
+
+      try {
+        const res = await fetch("/api/profile", { method: "DELETE" });
+        if (res.ok) {
+          alert("Account deleted successfully.");
+          window.location.href = "/signup";
+        } else {
+          alert("Failed to delete account.");
+        }
+      } catch (err) {
+        alert("Error deleting account.");
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

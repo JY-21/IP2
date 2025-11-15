@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
         <link rel="stylesheet" href="styles.css">
     </head>
-    <script src="script.js"></script>
+    <script src="history.js"></script>
     <body>
         <!--Side menu-->
         <aside class="side-menu">
@@ -14,7 +14,7 @@
                 <!-- Logo Section -->
                 <div class="logo-section">
                     <img src="/logo.png" alt="ErRun Logo" class="company-logo">
-                    <h2 class="app-name">ErRun</h2>
+                    <h2 class="app-name">ErRuns</h2>
                 </div>
 
                 <!-- Navigation Menu -->
@@ -29,7 +29,7 @@
                         <li class="nav-item active">
                             <a href="history.html">
                                 <span class="nav-icon">📜</span>
-                                <span class="nav-text">Task History</span>
+                                <span class="nav-text">History</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -64,7 +64,7 @@
                 <div class="stats-summary">
                     <div class="stat-card">
                         <span class="stat-number" id="totalCompleted">0</span>
-                        <span class="stat-label">Completed Tasks</span>
+                        <span class="stat-label">Total Completed</span>
                     </div>
                     <div class="stat-card">
                         <span class="stat-number" id="thisWeek">0</span>
@@ -77,60 +77,8 @@
                 </div>
             </div>
 
-            <!--Filter Controls-->
-            <div class="filter-controls">
-                <div class="filter-group">
-                    <label for="timeFilter">Time Period:</label>
-                    <select id="timeFilter" class="filter-select">
-                        <option value="all">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="year">This Year</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="categoryFilterHistory">Category:</label>
-                    <select id="categoryFilterHistory" class="filter-select">
-                        <option value="all">All Categories</option>
-                        <option value="Bills">Bills</option>
-                        <option value="Groceries">Groceries</option>
-                        <option value="Delivery">Delivery</option>
-                        <option value="Others">Others</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="sortByHistory">Sort by:</label>
-                    <select id="sortByHistory" class="filter-select">
-                        <option value="recent">Most Recent</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="priority">Priority</option>
-                    </select>
-                </div>
-
-                <button id="clearFiltersHistory" class="clear-filters-btn">Clear Filters</button>
-            </div>
-
-            <!--Completed Task list-->
+            <!--Completed Task list with same styling as home page-->
             <div id="completedTaskList" class="task-list"></div>
         </main>
-
-        <!-- Task Detail Modal -->
-        <div id="taskDetailModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span id="closeDetailModal" class="close">&times;</span>
-                    <h2>Task Details</h2>
-                </div>
-                <div class="modal-body">
-                    <div id="taskDetailContent" class="task-detail-content"></div>
-                </div>
-                <div class="modal-footer">
-                    <button id="closeDetailBtn" class="cancel-btn">Close</button>
-                </div>
-            </div>
-        </div>
     </body>
 </html>
