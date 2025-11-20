@@ -171,29 +171,28 @@ a:hover {
 
 /* Compact logo section */
 .logo-section {
-  text-align: center;
-  padding: 1.5rem 1rem; /* Reduced from 2rem 1rem */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    background: #2e7d32; /* Green background matching sidebar */
+    padding: 1.5rem 1rem;
+    border-radius: 12px;
+    margin: 1rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .company-logo {
-  width: 60px; /* Reduced from 80px */
-  height: 60px; /* Reduced from 80px */
-  border-radius: 12px; /* Slightly smaller */
-  margin-bottom: 0.6rem; /* Reduced from 0.8rem */
-  object-fit: contain;
-  background: white;
-  padding: 6px; /* Reduced from 8px */
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    max-width: 100px;
+    height: auto;
+    display: block;
+    margin: 0 auto 0.75rem auto;
+    filter: brightness(0) invert(1); /* Makes white logo visible on green */
 }
 
 .app-name {
-  font-size: 1.5em; /* Reduced from 1.8em */
-  font-weight: bold;
-  color: white;
-  margin: 0;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-  letter-spacing: 0.5px;
+    color: white;
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .nav-menu {
@@ -291,20 +290,14 @@ a:hover {
 
 /* Header Island */
 .top-header {
-  position: fixed;
-  top: 0;
-  left: 240px;
-  right: 0;
-  height: 70px;
-  background: #ffffff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  border-radius: 0 0 20px 20px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 0 2rem;
-  z-index: 1000;
-  transition: all 0.3s ease;
+    background: #2e7d32; /* Green background */
+    color: white;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    height: 80px;
 }
 
 /* Profile Button */
@@ -321,13 +314,30 @@ a:hover {
   justify-content: center;
 }
 
+.welcome-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.welcome-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.date-time {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
 .profile-pic {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #2e7d32;
-  cursor: pointer;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 3px solid white;
+    object-fit: cover;
 }
 
 /* Main Content */

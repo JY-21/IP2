@@ -410,25 +410,34 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
   try {
     const { title, category, remarks, origin, destination, deadline, complete, completedAt } = req.body;
 
-    console.log('📝 Edit/Complete Task Request for task:', req.params.id, 'Complete:', complete);
+    console.log('📝 PUT /tasks/:id - Body:', req.body);
+    console.log('📝 Task ID:', req.params.id, 'Complete:', complete);
 
-    // If this is a completion request
+    // Handle task completion
     if (complete === 1) {
+      console.log('✅ Marking task as complete:', req.params.id);
+      
       db.query(
         `UPDATE tasks 
          SET complete = ?, completed_at = ?
          WHERE task_id = ? AND user_id = ?`,
         [
           1,
-          completedAt || new Date(),
+          completedAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
           req.params.id,
           req.session.user.user_id
         ],
         (err, result) => {
           if (err) {
-            console.error("DB Completion Error:", err);
+            console.error("❌ DB Completion Error:", err);
             return res.status(500).json({ error: "Database error" });
           }
+          
+          if (result.affectedRows === 0) {
+            console.error("❌ Task not found or not owned by user");
+            return res.status(404).json({ error: "Task not found" });
+          }
+          
           console.log('✅ Task marked as complete:', req.params.id);
           res.json({ 
             success: true, 
@@ -436,10 +445,13 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
           });
         }
       );
-      return; // Exit early for completion requests
+      return;
     }
 
-    // Original edit task logic for non-completion requests
+    // Handle task editing (only if complete is not 1)
+    console.log('📝 Editing task:', req.params.id);
+    
+    // Calculate hours until deadline
     const now = new Date();
     const deadlineDate = new Date(deadline);
     const timeDiff = deadlineDate.getTime() - now.getTime();
@@ -486,9 +498,14 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
       ],
       (err, result) => {
         if (err) {
-          console.error("DB Update Error:", err);
+          console.error("❌ DB Update Error:", err);
           return res.status(500).json({ error: "Database error" });
         }
+        
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: "Task not found" });
+        }
+        
         res.json({ 
           success: true, 
           newPriority: predictedPriority
@@ -497,7 +514,7 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
     );
 
   } catch (err) {
-    console.error("Edit/Complete Task Error:", err);
+    console.error("❌ Edit/Complete Task Error:", err);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
