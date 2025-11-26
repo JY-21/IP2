@@ -83,8 +83,9 @@ function init() {
     const currentPage = getCurrentPage();
 
     initializeElements();
-    initMobileMenu();
     setupEventListeners();
+    setupMobileMenu();
+    updateWelcomeMessage();
 
     if(currentPage === 'home'){
         setMinDate();
@@ -98,50 +99,110 @@ function init() {
     }
 }
 
-// Add mobile menu toggle functionality
-function initMobileMenu() {
-    const menuToggle = document.createElement('button');
-    menuToggle.className = 'menu-toggle';
-    menuToggle.innerHTML = '☰';
-    menuToggle.setAttribute('aria-label', 'Toggle menu');
-    
-    const sidebarOverlay = document.createElement('div');
-    sidebarOverlay.className = 'sidebar-overlay';
-    
-    document.body.appendChild(menuToggle);
-    document.body.appendChild(sidebarOverlay);
-    
+function updateWelcomeMessage(){
+    const welcomeElement = document.getElementById('welcomeMessage');
+    const dateTimeElement = document.getElementById('currentDateTime');
+
+    if(welcomeElement){
+        const userName = getUserName();
+        welcomeElement.textContent = `Welcome, ${userName || 'User'}!`;
+    }
+
+    if(dateTimeElement){
+        updateDateTime();
+        setInterval(updateDateTime, 1000); //update every second for real time
+    }
+}
+
+function getUserName(){
+    return localStorage.getItem('username') || 'User';
+}
+
+function updateDateTime(){
+    const dateTimeElement = document.getElementById('currenDateTime');
+    if(dateTimeElement){
+        const now = new Date();
+
+        //convert to Malaysian time (UTC+8)
+        const malaysiaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+
+        const options = {
+            timeZone: 'Asia/Kuala_Lumpur',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+
+        dateTimeElement.textContent = malaysiaTime.toLocaleDateString('en-MY', options);
+    }
+}
+
+// Setup mobile menu functionality
+function setupMobileMenu() {
+    const menuToggle = document.querySelector('.menu-toggle');
     const sideMenu = document.querySelector('.side-menu');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
     
-    menuToggle.addEventListener('click', () => {
-        sideMenu.classList.toggle('expanded');
-    });
-    
-    sidebarOverlay.addEventListener('click', () => {
-        sideMenu.classList.remove('expanded');
-    });
-    
-    // Close sidebar when clicking on nav items on mobile
-    const navItems = document.querySelectorAll('.nav-item a');
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            if (window.innerWidth <= 768) {
+    if (menuToggle && sideMenu && sidebarOverlay) {
+        // Toggle sidebar on mobile
+        menuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            sideMenu.classList.toggle('expanded');
+            sidebarOverlay.classList.toggle('active');
+            document.body.classList.toggle('sidebar-open');
+        });
+        
+        // Close sidebar when clicking on overlay
+        sidebarOverlay.addEventListener('click', function() {
+            sideMenu.classList.remove('expanded');
+            sidebarOverlay.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+        });
+        
+        // Close sidebar when clicking on nav links on mobile
+        const navLinks = document.querySelectorAll('.nav-item a');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    sideMenu.classList.remove('expanded');
+                    sidebarOverlay.classList.remove('active');
+                    document.body.classList.remove('sidebar-open');
+                }
+            });
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                // Reset mobile states on larger screens
                 sideMenu.classList.remove('expanded');
+                sidebarOverlay.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
             }
         });
-    });
-    
-    // Close sidebar on window resize
-    window.addEventListener('resize', () => {
-        if (window.innerWidth > 768) {
-            sideMenu.classList.remove('expanded');
-        }
-    });
+        
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 768 && 
+                sideMenu.classList.contains('expanded') &&
+                !sideMenu.contains(event.target) &&
+                !menuToggle.contains(event.target)) {
+                sideMenu.classList.remove('expanded');
+                sidebarOverlay.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
+        });
+    }
 }
 
 function setupEventListeners() {
-
     const currentPage = getCurrentPage();
+    
     // Task modal events
     if (newTaskBtn) newTaskBtn.addEventListener("click", openNewTaskModal);
     if (closeModal) closeModal.addEventListener("click", closeTaskModal);
@@ -165,6 +226,9 @@ function setupEventListeners() {
     // Global click events
     window.addEventListener('click', handleGlobalClicks);
     if (taskList) taskList.addEventListener("click", handleTaskActions);
+    
+    // Setup logout
+    setupLogout();
 }
 
 function handleGlobalClicks(e) {
@@ -208,9 +272,13 @@ async function loadTasks() {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         
         const tasks = await res.json();
-        currentTasks = tasks;
-        console.log('📋 Loaded tasks with route data:', tasks);
-        renderTasks(tasks);
+        
+        // Filter to show only INCOMPLETE tasks on home page
+        const incompleteTasks = tasks.filter(task => task.complete === 0);
+        currentTasks = incompleteTasks;
+        
+        console.log('Loaded incomplete tasks:', incompleteTasks);
+        renderTasks(incompleteTasks);
     } catch (err) {
         console.error("Failed to load tasks:", err);
         showNotification('Failed to load tasks: ' + err.message, 'error');
@@ -1073,7 +1141,7 @@ function handleTaskActions(e) {
     }
 }
 
-// New dedicated function for completing tasks
+// Enhanced complete task function with smooth animation
 async function completeTask(taskId, buttonElement) {
     const task = currentTasks.find(t => t.id === taskId);
     if (!task) {
@@ -1082,16 +1150,21 @@ async function completeTask(taskId, buttonElement) {
     }
 
     try {
-        // Add fade-out animation to task bar
+        // Add smooth fade-out animation to task bar
         const taskBar = buttonElement.closest('.task-bar');
         if (taskBar) {
             taskBar.style.transition = 'all 0.5s ease-in-out';
             taskBar.style.opacity = '0';
             taskBar.style.transform = 'translateX(-100%)';
-            taskBar.style.height = '0';
-            taskBar.style.margin = '0';
-            taskBar.style.padding = '0';
-            taskBar.style.overflow = 'hidden';
+            taskBar.style.height = taskBar.offsetHeight + 'px';
+            
+            // Wait a bit before starting the collapse animation
+            setTimeout(() => {
+                taskBar.style.height = '0';
+                taskBar.style.margin = '0';
+                taskBar.style.padding = '0';
+                taskBar.style.overflow = 'hidden';
+            }, 200);
         }
         
         // Wait for animation to complete
@@ -1099,12 +1172,13 @@ async function completeTask(taskId, buttonElement) {
         
         // Send completion request to backend
         const now = new Date().toISOString();
+        console.log('🔄 Completing task:', taskId, 'at:', now);
+        
         const res = await fetch(`/tasks/${taskId}`, { 
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ 
-                ...task, 
                 complete: 1,
                 completedAt: now
             })
@@ -1116,21 +1190,31 @@ async function completeTask(taskId, buttonElement) {
         }
         
         if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
+            const errorText = await res.text();
+            throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
         }
         
         const result = await res.json();
         console.log('✅ Task completion response:', result);
         
-        // Remove from DOM after successful backend update
-        if (taskBar) {
-            taskBar.remove();
+        if (result.success) {
+            // Remove from DOM after successful backend update
+            if (taskBar) {
+                taskBar.remove();
+            }
+            
+            // Update currentTasks array
+            currentTasks = currentTasks.filter(t => t.id !== taskId);
+            
+            showNotification('✅ Task completed! Check Task History.', 'success');
+            
+            // Update task list if empty
+            if (currentTasks.length === 0 && taskList) {
+                taskList.innerHTML = '<div class="no-tasks">No tasks yet. Create your first task!</div>';
+            }
+        } else {
+            throw new Error(result.error || 'Unknown error');
         }
-        
-        // Update currentTasks array
-        currentTasks = currentTasks.filter(t => t.id !== taskId);
-        
-        showNotification('✅ Task completed! Check Task History.', 'success');
         
     } catch (err) {
         console.error('❌ Error completing task:', err);
@@ -1406,19 +1490,7 @@ function viewCompletedTaskRoute(taskId) {
 
     // Check if task has route data
     const hasSingleRoute = task.origin_lat !== null && task.dest_lat !== null;
-    const hasMultiRoute = task.multi_destinations && task.total_route_distance !== null;
     
-    if (!hasSingleRoute && !hasMultiRoute) {
-        showNotification('No route data available for this task', 'info');
-        return;
-    }
-
-    // For now, just show a message. You can implement a view-only map modal later.
-    if (hasMultiRoute) {
-        showNotification(`This task had a multi-stop route with ${task.multi_destinations.length} destinations`, 'info');
-    } else {
-        showNotification(`This task had a route from ${task.origin} to ${task.destination}`, 'info');
-    }
 }
 
 // Logout functionality
@@ -1443,7 +1515,9 @@ function setupLogout() {
     }
 }
 
-// Initialize logout when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    setupLogout();
-});
+// Profile page function (placeholder)
+function loadProfile() {
+    // Add profile loading logic here
+    console.log('Loading profile...');
+}
+

@@ -11,13 +11,14 @@
     <script src="script.js"></script>
     
     <body>
+        <button class="menu-toggle">☰</button>
+        <div class="sidebar-overlay"></div>
         <!--Side menu-->
         <aside class="side-menu">
             <div class="side-container">
                 <!-- Logo Section -->
                 <div class="logo-section">
                     <img src="ErRuns logo.png" alt="ErRun Logo" class="company-logo">
-                    <h2 class="app-name">ErRuns</h2>
                 </div>
 
                 <!-- Navigation Menu -->
@@ -64,7 +65,7 @@
 
         <main class="main-content">
             <div class="content-header">
-                <h1>Current Tasks:</h1>
+                <h1>Current Tasks</h1>
                 <button id="newTaskBtn" class="new-task-btn">+ New Task</button>
             </div>
 
@@ -72,23 +73,20 @@
             <div id="taskList" class="task-list"></div>
         </main>
 
-        <!-- Task Modal (same as before) -->
+        <!-- All your modals remain exactly the same -->
         <div id="taskModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <span id="closeModal" class="close">&times;</span>
                     <h2>Add Task</h2>
                 </div>
-
                 <div class="modal-body">
                     <form id="taskForm" class="task-form-grid">
                         <input type="hidden" id="taskId" name="taskId">
-
                         <div>
                             <label for="taskTitle">Task Name:</label>
                             <input type="text" id="taskTitle" name="title" required>
                         </div>
-
                         <div>
                             <label for="taskCategory">Category:</label>
                             <select id="taskCategory" name="category" required>
@@ -99,36 +97,30 @@
                                 <option value="Others">Others</option>
                             </select>
                         </div>
-
                         <div class="full-width">
                             <label for="taskRemarks">Remarks (Optional):</label>
                             <textarea id="taskRemarks" name="remarks"></textarea>
                         </div>
-
                         <div>
                             <label for="taskOrigin">Point of Origin:</label>
                             <input type="text" id="taskOrigin" name="origin" placeholder="Your starting location" required>
                         </div>
-
                         <div>
                             <label for="taskDestination">Destination:</label>
                             <input type="text" id="taskDestination" name="destination" placeholder="Where you need to go" required>
                         </div>
-
                         <div>
                             <label for="taskDeadline">Deadline:</label>
                             <input type="date" id="taskDeadline" name="deadline" required>
                         </div>
                     </form>
                 </div>
-
                 <div class="modal-footer">
                     <button type="submit" form="taskForm" class="save-btn">Save Task</button>
                 </div>
             </div>
         </div>
 
-        <!-- Delete Confirmation Modal (same as before) -->
         <div id="deleteModal" class="modal">
             <div class="delete-modal-content">
                 <div class="delete-modal-header">Confirm Delete</div>
@@ -142,7 +134,6 @@
             </div>
         </div>
     
-        <!-- Map Modal (same as before) -->
         <div id="mapModal" class="modal">
             <div class="modal-content map-modal-content">
                 <div class="modal-header">

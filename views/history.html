@@ -6,15 +6,17 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
         <link rel="stylesheet" href="styles.css">
     </head>
-    <script src="history.js"></script>
+    <script src="script.js"></script>
     <body>
+        <button class="menu-toggle">☰</button>
+        <div class="sidebar-overlay"></div>
+        
         <!--Side menu-->
         <aside class="side-menu">
             <div class="side-container">
                 <!-- Logo Section -->
                 <div class="logo-section">
-                    <img src="/logo.png" alt="ErRun Logo" class="company-logo">
-                    <h2 class="app-name">ErRuns</h2>
+                    <img src="ErRuns logo.png" alt="ErRun Logo" class="company-logo">
                 </div>
 
                 <!-- Navigation Menu -->
@@ -54,7 +56,7 @@
          <!--Top header-->
        <header class="top-header">
             <div class="welcome-section">
-                <h1 class="welcome-text" id="welcomeMessage">Welcome!</h1>
+                <h1 class="welcome-text" id="welcomeMessage">Task History</h1>
                 <p class="date-time" id="currentDateTime"></p>
             </div>
        </header>
@@ -62,24 +64,40 @@
         <main class="main-content">
             <div class="content-header">
                 <h1>Task History</h1>
-                <div class="stats-summary">
-                    <div class="stat-card">
-                        <span class="stat-number" id="totalCompleted">0</span>
-                        <span class="stat-label">Total Completed</span>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-number" id="thisWeek">0</span>
-                        <span class="stat-label">This Week</span>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-number" id="thisMonth">0</span>
-                        <span class="stat-label">This Month</span>
-                    </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <span class="stat-number" id="totalCompleted">0</span>
+                    <span class="stat-label">Total Completed</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="thisWeek">0</span>
+                    <span class="stat-label">This Week</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="thisMonth">0</span>
+                    <span class="stat-label">This Month</span>
                 </div>
             </div>
 
             <!--Completed Task list with same styling as home page-->
             <div id="completedTaskList" class="task-list"></div>
         </main>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="modal">
+            <div class="delete-modal-content">
+                <div class="delete-modal-header">Confirm Delete</div>
+                <div class="delete-modal-body">
+                    <p>Are you sure you want to permanently delete this completed task?</p>
+                </div>
+                <div class="delete-modal-footer">
+                    <button id="cancelDeleteBtn" class="cancel-btn">Cancel</button>
+                    <button id="confirmDeleteBtn" class="delete-btn">Delete</button>
+                </div>
+            </div>
+        </div>
     </body>
 </html>

@@ -310,7 +310,7 @@ app.get('/tasks', requireAuth, (req, res) => {
       category, 
       remarks, 
       origin, 
-      location AS destination,
+      location AS location,
       deadline, 
       priority, 
       complete,
@@ -337,7 +337,7 @@ app.get('/tasks', requireAuth, (req, res) => {
 
 app.post('/add-task', requireAuth, async (req, res) => {
   try {
-    const { title, category, remarks, origin, destination, deadline } = req.body;
+    const { title, category, remarks, origin, location, deadline } = req.body;
 
     console.log('📝 Add Task Request from user:', req.session.user.username);
 
@@ -382,7 +382,7 @@ app.post('/add-task', requireAuth, async (req, res) => {
         category,
         remarks,
         origin,
-        destination || "",
+        location || "",
         deadline,
         predictedPriority,
         0
@@ -406,9 +406,10 @@ app.post('/add-task', requireAuth, async (req, res) => {
   }
 });
 
+//Task Completion
 app.put('/tasks/:id', requireAuth, async (req, res) => {
   try {
-    const { title, category, remarks, origin, destination, deadline, complete, completedAt } = req.body;
+    const { title, category, remarks, origin, location, deadline, complete, completedAt } = req.body;
 
     console.log('📝 PUT /tasks/:id - Body:', req.body);
     console.log('📝 Task ID:', req.params.id, 'Complete:', complete);
@@ -490,7 +491,7 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
         category,
         remarks,
         origin,
-        destination || "",
+        location || "",
         deadline,
         predictedPriority,
         req.params.id,
@@ -533,7 +534,37 @@ app.delete('/tasks/:id', requireAuth, (req, res) => {
   );
 });
 
-// Route management
+// Route management - FIXED: Remove duplicate route and use location AS location
+app.get('/tasks/:id/route', requireAuth, (req, res) => {
+    const sql = `
+        SELECT origin, location AS location, 
+               origin_lat, origin_lon,
+               dest_lat, dest_lon,
+               route_distance, route_duration
+        FROM tasks 
+        WHERE task_id = ? AND user_id = ?`;
+    
+    db.query(sql, [req.params.id, req.session.user.user_id], (err, results) => {
+        if (err) {
+            console.error("Route fetch error:", err);
+            return res.status(500).json({ error: "Database error" });
+        }
+        
+        if (results.length > 0 && results[0].origin_lat !== null) {
+            res.json({ 
+                success: true, 
+                route: results[0] 
+            });
+        } else {
+            res.json({ 
+                success: false, 
+                message: "No route saved" 
+            });
+        }
+    });
+});
+
+// ADD THIS MISSING ROUTE FOR SAVING ROUTES
 app.post('/tasks/:id/route', requireAuth, (req, res) => {
     console.log('POST /tasks/:id/route called by user:', req.session.user.username);
 
@@ -575,49 +606,20 @@ app.post('/tasks/:id/route', requireAuth, (req, res) => {
     );
 });
 
-app.get('/tasks/:id/route', requireAuth, (req, res) => {
-    const sql = `
-        SELECT origin, destination, 
-               origin_lat, origin_lon,
-               dest_lat, dest_lon,
-               route_distance, route_duration
-        FROM tasks 
-        WHERE task_id = ? AND user_id = ?`;
-    
-    db.query(sql, [req.params.id, req.session.user.user_id], (err, results) => {
-        if (err) {
-            console.error("Route fetch error:", err);
-            return res.status(500).json({ error: "Database error" });
-        }
-        
-        if (results.length > 0 && results[0].origin_lat !== null) {
-            res.json({ 
-                success: true, 
-                route: results[0] 
-            });
-        } else {
-            res.json({ 
-                success: false, 
-                message: "No route saved" 
-            });
-        }
-    });
-});
-
 // API routes
 app.post('/api/directions', requireAuth, async (req, res) => {
   try {
-    const { origin, destination, profile = 'driving-car' } = req.body;
+    const { origin, location, profile = 'driving-car' } = req.body;
     
-    if (!origin || !destination) {
-      return res.status(400).json({ error: "Origin and destination required" });
+    if (!origin || !location) {
+      return res.status(400).json({ error: "Origin and location required" });
     }
 
     res.json({
       success: true,
       message: "Directions service - coordinates needed for routing",
       origin: origin,
-      destination: destination
+      location: location
     });
 
   } catch (error) {
@@ -747,8 +749,8 @@ app.get('/api/completed-tasks', requireAuth, (req, res) => {
       category, 
       remarks, 
       origin, 
-      location AS destination,
-      multi_destinations,
+      location AS location,
+      multi_locations,
       deadline, 
       priority, 
       complete,
@@ -772,13 +774,13 @@ app.get('/api/completed-tasks', requireAuth, (req, res) => {
       return res.status(500).json({ error: "Database error" });
     }
     
-    // Parse multi_destinations JSON
+    // Parse multi_locations JSON
     results.forEach(task => {
-      if (task.multi_destinations) {
+      if (task.multi_locations) {
         try {
-          task.multi_destinations = JSON.parse(task.multi_destinations);
+          task.multi_locations = JSON.parse(task.multi_locations);
         } catch (e) {
-          task.multi_destinations = null;
+          task.multi_locations = null;
         }
       }
     });
