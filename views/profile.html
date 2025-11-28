@@ -1,149 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>User Profile</title>
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    .card {
-      max-width: 400px;
-      margin: 40px auto;
-      padding: 20px;
-      border-radius: 12px;
-      background: #f9f9f9;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    .card-header {
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-
-    .card-body input {
-      width: 100%;
-      margin-bottom: 12px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 1rem;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    .btn-save { background: #4CAF50; color: white; margin-bottom: 10px; }
-    .btn-delete { background: #e74c3c; color: white; }
-
-    .card-footer {
-      text-align: center;
-      margin-top: 10px;
-    }
-
-    .error {
-      color: red;
-      text-align: center;
-    }
-
-    .success {
-      color: green;
-      text-align: center;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ErRun: Profile</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="card">
-    <div class="card-header">My Profile</div>
-    <div class="card-body">
-      <form id="profileForm">
-        <input type="text" id="first_name" name="first_name" placeholder="First Name" required>
-        <input type="text" id="last_name" name="last_name" placeholder="Last Name" required>
-        <input type="email" id="email" name="email" placeholder="Email" required>
-        <input type="text" id="username" name="username" placeholder="Username" required>
-        <input type="password" id="password" name="password" placeholder="New Password (optional)">
-        <button type="submit" class="btn btn-save">Save Changes</button>
-      </form>
+    <button class="menu-toggle">☰</button>
+    <div class="sidebar-overlay"></div>
+    <!--Side menu-->
+    <aside class="side-menu">
+        <div class="side-container">
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <img src="ErRuns logo.png" alt="ErRun Logo" class="company-logo">
+            </div>
 
-      <button id="deleteBtn" class="btn btn-delete">Delete Account</button>
+            <!-- Navigation Menu -->
+            <nav class="nav-menu">
+                <ul>
+                    <li class="nav-item">
+                        <a href="home.html">
+                            <span class="nav-icon">🏠</span>
+                            <span class="nav-text">Home</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="history.html">
+                            <span class="nav-icon">📜</span>
+                            <span class="nav-text">Task History</span>
+                        </a>
+                    </li>
+                    <li class="nav-item active">
+                        <a href="profile.html">
+                            <span class="nav-icon">👤</span>
+                            <span class="nav-text">Profile</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
 
-      <p id="message"></p>
+            <!-- Logout Button at Bottom -->
+            <div class="logout-section">
+                <button id="logoutBtn" class="logout-btn">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-text">Logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!--Top header-->
+    <header class="top-header">
+        <div class="welcome-section">
+            <h1 class="welcome-text" id="welcomeMessage">My Profile</h1>
+            <p class="date-time" id="currentDateTime"></p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="content-header">
+            <h1>Account Settings</h1>
+        </div>
+
+        <!-- Profile Form Container -->
+        <div class="profile-container">
+            <div class="profile-card">
+                <form id="profileForm" class="profile-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="first_name">First Name</label>
+                            <input type="text" id="first_name" name="first_name" placeholder="Enter your first name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="last_name">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" placeholder="Enter your last name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">New Password (optional)</label>
+                        <input type="password" id="password" name="password" placeholder="Enter new password">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm new password">
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="save-btn">Save Changes</button>
+                        <button type="button" id="backBtn" class="back-btn">Back to Home</button>
+                    </div>
+                    
+                    <div id="message" class="message"></div>
+                </form>
+                
+                <div class="danger-zone">
+                    <h3>Danger Zone</h3>
+                    <p>Once you delete your account, there is no going back. Please be certain.</p>
+                    <button id="deleteBtn" class="delete-account-btn">Delete Account</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Delete Account Confirmation Modal -->
+    <div id="deleteAccountModal" class="modal">
+        <div class="delete-modal-content">
+            <div class="delete-modal-header">Confirm Account Deletion</div>
+            <div class="delete-modal-body">
+                <p>Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.</p>
+            </div>
+            <div class="delete-modal-footer">
+                <button id="cancelDeleteAccountBtn" class="cancel-btn">Cancel</button>
+                <button id="confirmDeleteAccountBtn" class="delete-btn">Delete Account</button>
+            </div>
+        </div>
     </div>
-    <div class="card-footer">
-      <a href="/home">⬅ Back to Home</a>
-    </div>
-  </div>
 
-  <script>
-    // Fetch user data
-    async function loadProfile() {
-      try {
-        const res = await fetch("/api/profile");
-        const data = await res.json();
-        if (res.ok) {
-          document.getElementById("first_name").value = data.first_name;
-          document.getElementById("last_name").value = data.last_name;
-          document.getElementById("email").value = data.email;
-          document.getElementById("username").value = data.username;
-        } else {
-          document.getElementById("message").innerText = data.error || "Failed to load profile.";
+    <script>
+        // Fetch user data
+        async function loadProfile() {
+            try {
+                const res = await fetch("/api/profile");
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById("first_name").value = data.first_name;
+                    document.getElementById("last_name").value = data.last_name;
+                    document.getElementById("email").value = data.email;
+                    document.getElementById("username").value = data.username;
+                } else {
+                    showMessage(data.error || "Failed to load profile.", "error");
+                }
+            } catch (err) {
+                showMessage("Error loading profile.", "error");
+            }
         }
-      } catch (err) {
-        document.getElementById("message").innerText = "Error loading profile.";
-      }
-    }
 
-    // Update profile
-    document.getElementById("profileForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const data = Object.fromEntries(formData.entries());
+        // Update profile
+        document.getElementById("profileForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Check if passwords match
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+            
+            if (password && password !== confirmPassword) {
+                showMessage("Passwords do not match.", "error");
+                return;
+            }
+            
+            // Remove confirmPassword from data before sending
+            delete data.confirmPassword;
+            
+            // If password is empty, remove it from data
+            if (!password) {
+                delete data.password;
+            }
 
-      try {
-        const res = await fetch("/api/profile", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
+            try {
+                const res = await fetch("/api/profile", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await res.json();
+                if (res.ok) {
+                    showMessage("✅ Profile updated successfully.", "success");
+                } else {
+                    showMessage(result.error || "Update failed.", "error");
+                }
+            } catch (err) {
+                showMessage("Error updating profile.", "error");
+            }
         });
 
-        const result = await res.json();
-        const msg = document.getElementById("message");
-        if (res.ok) {
-          msg.innerText = "✅ Profile updated successfully.";
-          msg.className = "success";
-        } else {
-          msg.innerText = result.error || "Update failed.";
-          msg.className = "error";
+        // Delete account
+        document.getElementById("deleteBtn").addEventListener("click", () => {
+            document.getElementById("deleteAccountModal").classList.add("show");
+        });
+
+        document.getElementById("cancelDeleteAccountBtn").addEventListener("click", () => {
+            document.getElementById("deleteAccountModal").classList.remove("show");
+        });
+
+        document.getElementById("confirmDeleteAccountBtn").addEventListener("click", async () => {
+            try {
+                const res = await fetch("/api/profile", { method: "DELETE" });
+                if (res.ok) {
+                    alert("Account deleted successfully.");
+                    window.location.href = "/signup";
+                } else {
+                    alert("Failed to delete account.");
+                }
+            } catch (err) {
+                alert("Error deleting account.");
+            }
+        });
+
+        // Back to home button
+        document.getElementById("backBtn").addEventListener("click", () => {
+            window.location.href = "home.html";
+        });
+
+        // Show message function
+        function showMessage(text, type) {
+            const messageEl = document.getElementById("message");
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            
+            // Auto-hide success messages after 3 seconds
+            if (type === "success") {
+                setTimeout(() => {
+                    messageEl.textContent = "";
+                    messageEl.className = "message";
+                }, 3000);
+            }
         }
-      } catch (err) {
-        document.getElementById("message").innerText = "Error updating profile.";
-      }
-    });
 
-    // Delete account
-    document.getElementById("deleteBtn").addEventListener("click", async () => {
-      if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
-
-      try {
-        const res = await fetch("/api/profile", { method: "DELETE" });
-        if (res.ok) {
-          alert("Account deleted successfully.");
-          window.location.href = "/signup";
-        } else {
-          alert("Failed to delete account.");
+        // Update date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentDateTime').textContent = now.toLocaleDateString('en-US', options);
         }
-      } catch (err) {
-        alert("Error deleting account.");
-      }
-    });
 
-    loadProfile();
-  </script>
+        // Initialize
+        loadProfile();
+        updateDateTime();
+        setInterval(updateDateTime, 60000); // Update every minute
+
+        // Menu toggle functionality
+        document.querySelector('.menu-toggle').addEventListener('click', function() {
+            document.querySelector('.side-menu').classList.toggle('expanded');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+            document.body.classList.toggle('sidebar-open');
+        });
+
+        document.querySelector('.sidebar-overlay').addEventListener('click', function() {
+            document.querySelector('.side-menu').classList.remove('expanded');
+            document.querySelector('.sidebar-overlay').classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+        });
+    </script>
 </body>
 </html>

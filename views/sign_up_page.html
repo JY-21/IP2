@@ -1,27 +1,60 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Sign Up Page</title>
-        <meta charset="utf-8">
-        <link rel="stylesheet" href="styles.css">
-    </head>
-
-    <body>
-        <div class="card">
-            <div class="card-header">Sign Up</div>
-            <div class="card-body">
-                <form action="signup" method="POST">
-                    <input type="text" name="first_name" placeholder="First Name" required>
-                    <input type="text" name="last_name" placeholder="Last Name" required>
-                    <input type="email" name="email" placeholder="Email" required>
-                    <input type="text" name="username" placeholder="Username" required>
-                    <input type="password" name="password" placeholder="Password" required>
-                    <button type="submit">Sign Up</button>
-                </form>
+<head>
+    <title>ErRun: Sign Up</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <img src="ErRuns Logo 2.png" alt="ErRun Logo" class="auth-logo">
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Join ErRuns and start managing your tasks</p>
             </div>
-            <div class="card-footer">
-                <p>Already have an account? <a href="/login">Login Here</a></p>
-            </div>    
+            
+            <form id="signupForm" class="auth-form">
+                <div id="formMessage" style="display: none;"></div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" placeholder="Enter your first name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" placeholder="Enter your last name" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Choose a username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password" required>
+                </div>
+                
+                <button type="submit" class="auth-btn" id="submitBtn">
+                    Create Account
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Already have an account? <a href="/login" class="auth-link">Login Here</a></p>
+            </div>
         </div>
-        </body>
+    </div>
+
+    <script src="script.js"></script>
+</body>
 </html>

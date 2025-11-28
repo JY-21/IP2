@@ -43,16 +43,17 @@ const sessionStore = new MySQLStore({
 // Session configuration
 app.use(session({
   key: 'session_cookie_name',
-  secret: 'your_strong_secret_key_here_change_this', // Change this to a strong secret
+  secret: 'secret_session',
   store: sessionStore,
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: false, // This should be false
   cookie: {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: false, // Set to true in production with HTTPS
     httpOnly: true,
     sameSite: 'lax'
-  }
+  },
+  rolling: true 
 }));
 
 // Middleware
@@ -321,7 +322,7 @@ app.get('/tasks', requireAuth, (req, res) => {
       route_distance,
       route_duration
     FROM tasks
-    WHERE user_id = ?
+    WHERE user_id = ? AND complete = 0  -- Only get incomplete tasks
   `;
   
   db.query(sql, [req.session.user.user_id], (err, results) => {
@@ -330,7 +331,7 @@ app.get('/tasks', requireAuth, (req, res) => {
       return res.status(500).json({ error: "Database error" });
     }
     
-    console.log('📋 Tasks loaded for user:', req.session.user.username);
+    console.log('📋 Incomplete tasks loaded for user:', req.session.user.username);
     res.json(results);
   });
 });
@@ -414,14 +415,15 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
     console.log('📝 PUT /tasks/:id - Body:', req.body);
     console.log('📝 Task ID:', req.params.id, 'Complete:', complete);
 
-    // Handle task completion
+  
+        // Handle task completion
     if (complete === 1) {
       console.log('✅ Marking task as complete:', req.params.id);
       
       db.query(
         `UPDATE tasks 
-         SET complete = ?, completed_at = ?
-         WHERE task_id = ? AND user_id = ?`,
+        SET complete = ?, completedAt = ?
+        WHERE task_id = ? AND user_id = ?`,
         [
           1,
           completedAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
@@ -648,7 +650,7 @@ app.get('/api/optimized-route', requireAuth, async (req, res) => {
     const sql = `
       SELECT task_id, title, origin, location, priority
       FROM tasks
-      WHERE user_id = ? AND complete = 0`;
+      WHERE user_id = ? AND complete = 0`;  // Only incomplete tasks
 
     db.query(sql, [req.session.user.user_id], async (err, results) => {
       if(err){
@@ -741,6 +743,7 @@ app.get("/history", requireAuth, (req, res) => {
 });
 
 // Get completed tasks for history page
+
 app.get('/api/completed-tasks', requireAuth, (req, res) => {
   const sql = `
     SELECT 
@@ -749,23 +752,20 @@ app.get('/api/completed-tasks', requireAuth, (req, res) => {
       category, 
       remarks, 
       origin, 
-      location AS location,
-      multi_locations,
+      location AS destination,
       deadline, 
       priority, 
       complete,
-      completed_at,
+      completedAt,
       origin_lat,
       origin_lon,
       dest_lat, 
       dest_lon,
       route_distance,
-      route_duration,
-      total_route_distance,
-      total_route_duration
+      route_duration
     FROM tasks
     WHERE user_id = ? AND complete = 1
-    ORDER BY completed_at DESC
+    ORDER BY completedAt DESC
   `;
   
   db.query(sql, [req.session.user.user_id], (err, results) => {
@@ -773,17 +773,6 @@ app.get('/api/completed-tasks', requireAuth, (req, res) => {
       console.error("History DB Fetch Error:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    
-    // Parse multi_locations JSON
-    results.forEach(task => {
-      if (task.multi_locations) {
-        try {
-          task.multi_locations = JSON.parse(task.multi_locations);
-        } catch (e) {
-          task.multi_locations = null;
-        }
-      }
-    });
     
     console.log('📜 Loaded completed tasks:', results.length);
     res.json(results);
@@ -795,8 +784,8 @@ app.get('/api/history-stats', requireAuth, (req, res) => {
   const sql = `
     SELECT 
       COUNT(*) as total_completed,
-      SUM(CASE WHEN completed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as this_week,
-      SUM(CASE WHEN completed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as this_month
+      SUM(CASE WHEN completedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as this_week,
+      SUM(CASE WHEN completedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as this_month
     FROM tasks 
     WHERE user_id = ? AND complete = 1
   `;

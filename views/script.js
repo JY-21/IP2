@@ -1,3 +1,31 @@
+
+function isPublicPage() {
+    const path = window.location.pathname.toLowerCase();
+    
+    // Check for login page
+    if (path === '/login' || 
+        path === '/login.html' || 
+        path.includes('login_page') ||
+        path.endsWith('login_page.html')) {
+        return 'login';
+    }
+    
+    // Check for signup page
+    if (path === '/signup' || 
+        path === '/signup.html' || 
+        path.includes('sign_up') ||
+        path.endsWith('sign_up_page.html')) {
+        return 'signup';
+    }
+    
+    // Check for landing page
+    if (path === '/' || path === '/index.html') {
+        return 'landing';
+    }
+    
+    return null; // Not a public page
+}
+
 // Authentication and session management
 async function checkAuth() {
     try {
@@ -6,13 +34,13 @@ async function checkAuth() {
         });
         
         if (!response.ok) {
-            console.log('❌ Not authenticated, redirecting to login');
+            console.log('Not authenticated, redirecting to login');
             window.location.href = '/login';
             return false;
         }
         
         const data = await response.json();
-        console.log('✅ User authenticated:', data.user.username);
+        console.log('User authenticated:', data.user.username);
         return true;
         
     } catch (error) {
@@ -22,17 +50,232 @@ async function checkAuth() {
     }
 }
 
-// Initialize the application with auth check
-async function initApp() {
-    const isAuthenticated = await checkAuth();
-    if (isAuthenticated) {
-        init();
+function initLoginPage() {
+    const loginForm = document.getElementById("loginForm");
+    const loginError = document.getElementById("loginError");
+
+    if (!loginForm) {
+        console.error('Login form not found!');
+        return;
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        
+        if (loginError) {
+            loginError.style.display = 'none';
+        }
+
+        try {
+            const res = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: 'include',
+                body: JSON.stringify(data),
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || !result.success) {
+                if (loginError) {
+                    loginError.textContent = result.message || "Login failed!";
+                    loginError.style.display = 'block';
+                }
+            } else {
+                window.location.href = "/home";
+            }
+        } catch (err) {
+            console.error("Login error:", err);
+            if (loginError) {
+                loginError.textContent = "Something went wrong. Please try again.";
+                loginError.style.display = 'block';
+            }
+        }
+    });
+
+    // Hide error when user starts typing
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    
+    if (usernameInput) {
+        usernameInput.addEventListener('input', hideLoginError);
+    }
+    if (passwordInput) {
+        passwordInput.addEventListener('input', hideLoginError);
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    initApp();
+function hideLoginError() {
+    const loginError = document.getElementById('loginError');
+    if (loginError) {
+        loginError.style.display = 'none';
+    }
+}
+
+function initSignupPage() {
+    console.log('Initializing signup page');
+    const signupForm = document.getElementById('signupForm');
+    const formMessage = document.getElementById('formMessage');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (signupForm) {
+        signupForm.addEventListener('submit', handleSignupSubmit);
+
+        // Hide message when user starts typing
+        const inputs = signupForm.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                if (formMessage && formMessage.style.display !== 'none') {
+                    formMessage.style.display = 'none';
+                }
+            });
+        });
+    } else {
+        console.log('Signup form not found');
+    }
+}
+
+async function handleSignupSubmit(e) {
+    e.preventDefault();
+    
+    const signupForm = document.getElementById('signupForm');
+    const formMessage = document.getElementById('formMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (!signupForm || !submitBtn) return;
+
+    // Get form data
+    const formData = new FormData(signupForm);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Validate required fields
+    if (!data.first_name || !data.last_name || !data.email || !data.username || !data.password) {
+        showFormMessage('Please fill in all required fields.', 'error', formMessage);
+        return;
+    }
+
+    // Show loading state
+    submitBtn.textContent = 'Creating Account...';
+    submitBtn.disabled = true;
+    
+    if (formMessage) {
+        formMessage.style.display = 'none';
+    }
+
+    try {
+        const response = await fetch('/signup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            // Success - show success message and redirect
+            showFormMessage('Account created successfully! Redirecting to login...', 'success', formMessage);
+            
+            // Redirect to login page after 2 seconds
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+        } else {
+            // Error - show error message
+            showFormMessage(result.message || 'Account creation failed. Please try again.', 'error', formMessage);
+        }
+    } catch (error) {
+        console.error('Signup error:', error);
+        showFormMessage('Network error. Please check your connection and try again.', 'error', formMessage);
+    } finally {
+        // Reset button state
+        submitBtn.textContent = 'Create Account';
+        submitBtn.disabled = false;
+    }
+}
+
+function showFormMessage(message, type, formMessage) {
+    if (!formMessage) return;
+    
+    formMessage.textContent = message;
+    formMessage.className = type === 'success' ? 'success-message' : 'error-message';
+    formMessage.style.display = 'block';
+    
+    // Scroll to message
+    formMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function initApp() {
+    const currentPage = getCurrentPage();
+    
+    console.log('Initializing app for page:', currentPage);
+    
+    // Handle different page types
+    if (currentPage === 'login') {
+        initLoginPage();
+        return;
+    }
+    
+    if (currentPage === 'signup') {
+        initSignupPage();
+        return;
+    }
+    
+    // For all other pages (home, profile, history), check authentication
+    const isAuthenticated = await checkAuth();
+    if (isAuthenticated) {
+        console.log('Auth successful, initializing page');
+        init();
+    } else {
+        console.log('Auth failed, redirecting to login');
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    const currentPage = getCurrentPage();
+    
+    console.log(' Page loaded:', currentPage);
+    
+    if (currentPage === 'login') {
+        initLoginPage();
+    } else if (currentPage === 'signup') {
+        initSignupPage();
+    } else {
+        await initApp();
+        startSessionHeartbeat();
+    }
 });
+
+function getCurrentPage() {
+    const path = window.location.pathname.toLowerCase();
+    const page = path.split('/').pop() || '';
+    
+    console.log('📍 Current path:', path, 'Page:', page);
+  
+    // Check for different pages
+    if (path === '/' || path.includes('home') || page === 'home' || page === 'home.html' || page === 'index.html') {
+        return 'home';
+    }
+    if (path.includes('login') || page === 'login' || page === 'login_page.html') {
+        return 'login';
+    }
+    if (path.includes('signup') || page === 'signup' || page === 'sign_up_page.html' || path.includes('sign_up')) {
+        return 'signup';
+    }
+    if (path.includes('history') || page === 'history' || page === 'history.html') {
+        return 'history';
+    }
+    if (path.includes('profile') || page === 'profile' || page === 'profile.html') {
+        return 'profile';
+    }
+    
+    return 'home'; // default
+}
 
 // ELEMENTS
 let modal, newTaskBtn, closeModal, taskList, taskForm, deleteModal, confirmDeleteBtn, cancelDeleteBtn, taskDeadlineInput;
@@ -103,9 +346,16 @@ function updateWelcomeMessage(){
     const welcomeElement = document.getElementById('welcomeMessage');
     const dateTimeElement = document.getElementById('currentDateTime');
 
-    if(welcomeElement){
-        const userName = getUserName();
-        welcomeElement.textContent = `Welcome, ${userName || 'User'}!`;
+    const currentPage = getCurrentPage();
+    
+    if (welcomeElement) {
+        if (currentPage === 'history') {
+            // Remove greeting for history page
+            welcomeElement.textContent = 'Task History';
+        } else {
+            const userName = getUserName();
+            welcomeElement.textContent = `Welcome, ${userName || 'User'}!`;
+        }
     }
 
     if(dateTimeElement){
@@ -113,32 +363,39 @@ function updateWelcomeMessage(){
         setInterval(updateDateTime, 1000); //update every second for real time
     }
 }
-
 function getUserName(){
     return localStorage.getItem('username') || 'User';
 }
 
 function updateDateTime(){
-    const dateTimeElement = document.getElementById('currenDateTime');
+    const dateTimeElement = document.getElementById('currentDateTime');
     if(dateTimeElement){
         const now = new Date();
 
-        //convert to Malaysian time (UTC+8)
+        // Convert to Malaysian time (UTC+8)
         const malaysiaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
 
-        const options = {
-            timeZone: 'Asia/Kuala_Lumpur',
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        };
-
-        dateTimeElement.textContent = malaysiaTime.toLocaleDateString('en-MY', options);
+        // Manual formatting for Malaysian time
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        const dayName = days[malaysiaTime.getUTCDay()];
+        const date = malaysiaTime.getUTCDate();
+        const month = months[malaysiaTime.getUTCMonth()];
+        const year = malaysiaTime.getUTCFullYear();
+        
+        let hours = malaysiaTime.getUTCHours();
+        const minutes = malaysiaTime.getUTCMinutes().toString().padStart(2, '0');
+        const seconds = malaysiaTime.getUTCSeconds().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        
+        const timeString = `${hours}:${minutes}:${seconds} ${ampm}`;
+        const dateString = `${dayName}, ${date} ${month} ${year}`;
+        
+        dateTimeElement.textContent = `${dateString} • ${timeString} (MYT)`;
     }
 }
 
@@ -306,7 +563,7 @@ function renderTasks(tasks) {
         const distance = hasRoute && task.route_distance ? parseFloat(task.route_distance).toFixed(1) : '0';
         const duration = hasRoute && task.route_duration ? Math.round(task.route_duration / 60) : 0;
 
-        console.log(`📊 Rendering Task ${task.id}:`, { 
+        console.log(`Rendering Task ${task.id}:`, { 
             hasRoute, 
             distance, 
             duration,
@@ -472,7 +729,7 @@ function closeMapModalHandler() {
 // Generate and display route from existing coordinates
 async function generateAndDisplayExistingRoute(route) {
     if (!route.origin_lat || !route.origin_lon || !route.dest_lat || !route.dest_lon) {
-        console.log('❌ Missing coordinates for route generation');
+        console.log(' Missing coordinates for route generation');
         return false;
     }
 
@@ -499,7 +756,7 @@ async function generateAndDisplayExistingRoute(route) {
                 }
             }).addTo(map);
             
-            console.log('✅ Route display generated successfully from existing coordinates');
+            console.log('Route display generated successfully from existing coordinates');
             
             // Update currentRoute object
             currentRoute = {
@@ -515,11 +772,11 @@ async function generateAndDisplayExistingRoute(route) {
             
             return true;
         } else {
-            console.log('❌ Could not generate route from OSRM');
+            console.log('Could not generate route from OSRM');
             return false;
         }
     } catch (error) {
-        console.error('❌ Error generating route from existing coordinates:', error);
+        console.error('Error generating route from existing coordinates:', error);
         return false;
     }
 }
@@ -551,13 +808,13 @@ function showRouteInfo(route) {
 // Load existing route for a task
 async function loadExistingRoute(taskId) {
     try {
-        console.log('🗺️ Loading existing route for task:', taskId);
+        console.log('Loading existing route for task:', taskId);
         const res = await fetch(`/tasks/${taskId}/route`, {
             credentials: 'include'
         });
         
         if (!res.ok) {
-            console.log('❌ No existing route found or error loading');
+            console.log(' No existing route found or error loading');
             if (map) map.setView([4.2105, 101.9758], 10);
             return;
         }
@@ -567,7 +824,7 @@ async function loadExistingRoute(taskId) {
         
         if (data.success && data.route) {
             const route = data.route;
-            console.log('✅ FOUND EXISTING ROUTE DATA:', {
+            console.log('FOUND EXISTING ROUTE DATA:', {
                 origin: `${route.origin_lat}, ${route.origin_lon}`,
                 destination: `${route.dest_lat}, ${route.dest_lon}`,
                 distance: route.route_distance,
@@ -601,7 +858,7 @@ async function loadExistingRoute(taskId) {
             
             // Generate and display the route if we have both coordinates
             if (originMarker && destinationMarker) {
-                console.log('🗺️ Both markers present, generating route display...');
+                console.log('Both markers present, generating route display...');
                 await generateAndDisplayExistingRoute(route);
                 
                 // Show route info
@@ -616,7 +873,7 @@ async function loadExistingRoute(taskId) {
                 }
                 if (map) map.fitBounds(group.getBounds().pad(0.2));
             } else {
-                console.log('❌ Missing markers for route regeneration');
+                console.log(' Missing markers for route regeneration');
                 if (route.origin_lat && route.origin_lon && map) {
                     map.setView([parseFloat(route.origin_lat), parseFloat(route.origin_lon)], 13);
                 }
@@ -625,11 +882,11 @@ async function loadExistingRoute(taskId) {
             if (saveRoute) saveRoute.disabled = false;
             if (generateRoute) generateRoute.disabled = false;
         } else {
-            console.log('ℹ️ No existing route found for this task');
+            console.log(' No existing route found for this task');
             if (map) map.setView([4.2105, 101.9758], 10);
         }
     } catch (error) {
-        console.error('❌ Error loading existing route:', error);
+        console.error(' Error loading existing route:', error);
         if (map) map.setView([4.2105, 101.9758], 10);
     }
 }
@@ -928,7 +1185,7 @@ async function saveRouteHandler() {
         return;
     }
 
-    console.log('💾 Attempting to save route for task:', currentTaskId);
+    console.log(' Attempting to save route for task:', currentTaskId);
 
     try {
         const requiredFields = ['originLat', 'originLon', 'destLat', 'destLon'];
@@ -947,7 +1204,7 @@ async function saveRouteHandler() {
             duration: parseInt(currentRoute.duration) || 0
         };
 
-        console.log('💾 Sending to server:', routeData);
+        console.log(' Sending to server:', routeData);
 
         const res = await fetch(`/tasks/${currentTaskId}/route`, {
             method: 'POST',
@@ -962,17 +1219,17 @@ async function saveRouteHandler() {
         }
 
         const result = await res.json();
-        console.log('💾 Server response:', result);
+        console.log('Server response:', result);
         
         if (res.ok && result.success) {
-            showNotification('✅ Route saved successfully!', 'success');
+            showNotification(' Route saved successfully!', 'success');
             closeMapModalHandler();
             await loadTasks(); // Reload tasks to get updated route info
         } else {
             throw new Error(result.error || `Server error: ${res.status}`);
         }
     } catch (error) {
-        console.error('💾 Save route error:', error);
+        console.error(' Save route error:', error);
         showNotification(`Failed to save route: ${error.message}`, 'error');
     }
 }
@@ -1141,7 +1398,6 @@ function handleTaskActions(e) {
     }
 }
 
-// Enhanced complete task function with smooth animation
 async function completeTask(taskId, buttonElement) {
     const task = currentTasks.find(t => t.id === taskId);
     if (!task) {
@@ -1190,23 +1446,29 @@ async function completeTask(taskId, buttonElement) {
         }
         
         if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+            let errorMessage = `HTTP error! status: ${res.status}`;
+            try {
+                const errorText = await res.text();
+                errorMessage += `, message: ${errorText}`;
+            } catch (e) {
+                // If we can't read the error text, use the status
+            }
+            throw new Error(errorMessage);
         }
         
         const result = await res.json();
-        console.log('✅ Task completion response:', result);
+        console.log(' Task completion response:', result);
         
         if (result.success) {
+            // Remove from currentTasks array
+            currentTasks = currentTasks.filter(t => t.id !== taskId);
+            
             // Remove from DOM after successful backend update
             if (taskBar) {
                 taskBar.remove();
             }
             
-            // Update currentTasks array
-            currentTasks = currentTasks.filter(t => t.id !== taskId);
-            
-            showNotification('✅ Task completed! Check Task History.', 'success');
+            showNotification(' Task completed! Check Task History.', 'success');
             
             // Update task list if empty
             if (currentTasks.length === 0 && taskList) {
@@ -1217,7 +1479,7 @@ async function completeTask(taskId, buttonElement) {
         }
         
     } catch (err) {
-        console.error('❌ Error completing task:', err);
+        console.error(' Error completing task:', err);
         
         // Revert animation if failed
         const taskBar = buttonElement.closest('.task-bar');
@@ -1246,10 +1508,38 @@ function formatDateForInput(dateString) {
 }
 
 function formatDateForDisplay(dateString) {
-    if (!dateString) return 'No deadline';
-    const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
+    if (!dateString) return 'No date';
+    
+    try {
+        // Handle different date formats
+        let date;
+        if (dateString instanceof Date) {
+            date = dateString;
+        } else if (typeof dateString === 'string') {
+            // Try parsing as ISO string first
+            date = new Date(dateString);
+            
+            // If that fails, try other common formats
+            if (isNaN(date.getTime())) {
+                // Try MySQL datetime format: YYYY-MM-DD HH:MM:SS
+                const mysqlFormat = dateString.replace(' ', 'T');
+                date = new Date(mysqlFormat);
+            }
+            
+            // If still invalid, return original string
+            if (isNaN(date.getTime())) {
+                return dateString;
+            }
+        } else {
+            return 'Invalid date';
+        }
+        
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return date.toLocaleDateString('en-US', options);
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return dateString || 'Unknown date';
+    }
 }
 
 function getPriorityLabel(priority) {
@@ -1336,7 +1626,7 @@ async function loadCompletedTasks() {
         
         const tasks = await response.json();
         completedTasks = tasks;
-        console.log('📜 Loaded completed tasks:', tasks);
+        console.log(' Loaded completed tasks:', tasks);
         renderCompletedTasks(tasks);
         
     } catch (error) {
@@ -1371,63 +1661,49 @@ function renderCompletedTasks(tasks) {
     tasks.forEach(task => {
         const priority = task.priority ? String(task.priority).toLowerCase() : 'medium';
         
-        // Check route types
-        const hasSingleRoute = task.origin_lat !== null && task.dest_lat !== null;
-        const hasMultiRoute = task.multi_destinations && task.total_route_distance !== null;
-        const hasRoute = hasSingleRoute || hasMultiRoute;
+        // Check if coordinates exist for route
+        const hasRoute = task.origin_lat !== null && task.dest_lat !== null && 
+                        task.route_distance !== null && task.route_duration !== null;
         
-        // Calculate display values
-        let distance = '0';
-        let duration = 0;
-        let stopsCount = 0;
-        
-        if (hasMultiRoute) {
-            distance = task.total_route_distance ? parseFloat(task.total_route_distance).toFixed(1) : '0';
-            duration = task.total_route_duration ? Math.round(task.total_route_duration / 60) : 0;
-            stopsCount = task.multi_destinations ? task.multi_destinations.length : 0;
-        } else if (hasSingleRoute) {
-            distance = task.route_distance ? parseFloat(task.route_distance).toFixed(1) : '0';
-            duration = task.route_duration ? Math.round(task.route_duration / 60) : 0;
-            stopsCount = 1;
+        // Safely format distance and duration
+        const distance = hasRoute && task.route_distance ? parseFloat(task.route_distance).toFixed(1) : '0';
+        const duration = hasRoute && task.route_duration ? Math.round(task.route_duration / 60) : 0;
+
+        // Format completion date - fix for completedAt field
+        let completedDate = 'Unknown';
+        if (task.completedAt) {
+            completedDate = formatDateForDisplay(task.completedAt);
+        } else if (task.completed_at) { // Fallback for different column name
+            completedDate = formatDateForDisplay(task.completed_at);
         }
 
         const div = document.createElement("div");
         div.className = `task-bar ${priority} completed`;
         
-        // Build destinations display
-        let destinationsHtml = '';
-        if (task.multi_destinations && Array.isArray(task.multi_destinations)) {
-            destinationsHtml = task.multi_destinations.map(dest => 
-                `<span class="destination">🎯 ${escapeHtml(dest)}</span>`
-            ).join('');
-        } else if (task.destination) {
-            destinationsHtml = `<span class="destination">🎯 ${escapeHtml(task.destination)}</span>`;
-        }
-        
-        // Format completion date
-        const completedDate = task.completed_at ? formatDateForDisplay(task.completed_at) : 'Unknown';
-        
         div.innerHTML = `
             <div class="task-info">
-                <strong>${escapeHtml(task.title)}</strong>
+                <div class="task-header">
+                    <strong>${escapeHtml(task.title)}</strong>
+                    <div class="completion-info">
+                        <span class="completed-date">✅ Completed: ${completedDate}</span>
+                    </div>
+                </div>
                 <span class="task-priority ${priority}">${getPriorityLabel(priority)}</span>
                 <div class="meta">
                     <span class="category">📁 ${escapeHtml(task.category)}</span>
                     <span class="deadline">📅 Original Deadline: ${formatDateForDisplay(task.deadline)}</span>
-                    <span class="completed-date">✅ Completed on: ${completedDate}</span>
                     <span class="origin">📍 ${escapeHtml(task.origin)}</span>
-                    ${destinationsHtml}
+                    ${task.destination ? `<span class="destination">🎯 ${escapeHtml(task.destination)}</span>` : ''}
                     ${task.remarks ? `<span class="remarks">💡 ${escapeHtml(task.remarks)}</span>` : ''}
                     ${hasRoute ? `
                         <div class="saved-route-info">
-                            <span class="saved-route">${hasMultiRoute ? '🔄 Multi-Route' : '🗺️ Route Saved'}</span>
-                            <span class="route-details">${distance} km • ${duration} min${hasMultiRoute ? ` • ${stopsCount} stops` : ''}</span>
+                            <span class="saved-route">🗺️ Route Saved</span>
+                            <span class="route-details">${distance} km • ${duration} min</span>
                         </div>
                     ` : ''}
                 </div>
             </div>
             <div class="task-actions">
-                <button class="route-btn" data-id="${task.id}" title="View Route">🗺️</button>
                 <button class="delete-btn" data-id="${task.id}" title="Delete Task">🗑️</button>
             </div>
         `;
@@ -1441,9 +1717,6 @@ function handleHistoryTaskActions(e) {
 
     if (e.target.classList.contains("delete-btn")) {
         deleteCompletedTask(id);
-    }
-    else if (e.target.classList.contains("route-btn")) {
-        viewCompletedTaskRoute(id);
     }
 }
 
@@ -1466,7 +1739,7 @@ async function deleteCompletedTask(taskId) {
         
         if (!response.ok) throw new Error("Failed to delete task");
         
-        showNotification('✅ Task deleted permanently!', 'success');
+        showNotification(' Task deleted permanently!', 'success');
         
         // Reload both tasks and stats
         await Promise.all([
