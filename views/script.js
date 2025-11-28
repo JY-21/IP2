@@ -1,32 +1,30 @@
-
-function isPublicPage() {
+// ===== PAGE DETECTION =====
+function getCurrentPage() {
     const path = window.location.pathname.toLowerCase();
+    const page = path.split('/').pop() || '';
     
-    // Check for login page
-    if (path === '/login' || 
-        path === '/login.html' || 
-        path.includes('login_page') ||
-        path.endsWith('login_page.html')) {
+    console.log('📍 Current path:', path, 'Page:', page);
+  
+    if (path === '/' || path.includes('home') || page === 'home' || page === 'home.html' || page === 'index.html') {
+        return 'home';
+    }
+    if (path.includes('login') || page === 'login' || page === 'login_page.html' || page === 'login.html') {
         return 'login';
     }
-    
-    // Check for signup page
-    if (path === '/signup' || 
-        path === '/signup.html' || 
-        path.includes('sign_up') ||
-        path.endsWith('sign_up_page.html')) {
+    if (path.includes('signup') || page === 'signup' || page === 'sign_up_page.html' || page === 'signup.html' || path.includes('sign_up')) {
         return 'signup';
     }
-    
-    // Check for landing page
-    if (path === '/' || path === '/index.html') {
-        return 'landing';
+    if (path.includes('history') || page === 'history' || page === 'history.html') {
+        return 'history';
+    }
+    if (path.includes('profile') || page === 'profile' || page === 'profile.html') {
+        return 'profile';
     }
     
-    return null; // Not a public page
+    return 'home';
 }
 
-// Authentication and session management
+// ===== AUTHENTICATION =====
 async function checkAuth() {
     try {
         const response = await fetch('/api/check-auth', {
@@ -34,23 +32,21 @@ async function checkAuth() {
         });
         
         if (!response.ok) {
-            console.log('Not authenticated, redirecting to login');
-            window.location.href = '/login';
             return false;
         }
         
         const data = await response.json();
-        console.log('User authenticated:', data.user.username);
-        return true;
+        return data.authenticated;
         
     } catch (error) {
         console.error('Auth check failed:', error);
-        window.location.href = '/login';
         return false;
     }
 }
 
+// ===== LOGIN PAGE =====
 function initLoginPage() {
+    console.log('🔐 Initializing login page');
     const loginForm = document.getElementById("loginForm");
     const loginError = document.getElementById("loginError");
 
@@ -69,7 +65,13 @@ function initLoginPage() {
             loginError.style.display = 'none';
         }
 
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        const originalText = submitButton.textContent;
+        
         try {
+            submitButton.textContent = 'Logging in...';
+            submitButton.disabled = true;
+
             const res = await fetch("/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -85,14 +87,18 @@ function initLoginPage() {
                     loginError.style.display = 'block';
                 }
             } else {
+                console.log('✅ Login successful, redirecting to home');
                 window.location.href = "/home";
             }
         } catch (err) {
             console.error("Login error:", err);
             if (loginError) {
-                loginError.textContent = "Something went wrong. Please try again.";
+                loginError.textContent = "Network error. Please try again.";
                 loginError.style.display = 'block';
             }
+        } finally {
+            submitButton.textContent = originalText;
+            submitButton.disabled = false;
         }
     });
 
@@ -101,20 +107,18 @@ function initLoginPage() {
     const passwordInput = document.getElementById('password');
     
     if (usernameInput) {
-        usernameInput.addEventListener('input', hideLoginError);
+        usernameInput.addEventListener('input', () => {
+            if (loginError) loginError.style.display = 'none';
+        });
     }
     if (passwordInput) {
-        passwordInput.addEventListener('input', hideLoginError);
+        passwordInput.addEventListener('input', () => {
+            if (loginError) loginError.style.display = 'none';
+        });
     }
 }
 
-function hideLoginError() {
-    const loginError = document.getElementById('loginError');
-    if (loginError) {
-        loginError.style.display = 'none';
-    }
-}
-
+// ===== SIGNUP PAGE =====
 function initSignupPage() {
     console.log('Initializing signup page');
     const signupForm = document.getElementById('signupForm');
@@ -134,7 +138,7 @@ function initSignupPage() {
             });
         });
     } else {
-        console.log('Signup form not found');
+        console.log(' Signup form not found');
     }
 }
 
@@ -178,22 +182,18 @@ async function handleSignupSubmit(e) {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // Success - show success message and redirect
-            showFormMessage('Account created successfully! Redirecting to login...', 'success', formMessage);
+            showFormMessage('✅ Account created successfully! Redirecting to login...', 'success', formMessage);
             
-            // Redirect to login page after 2 seconds
             setTimeout(() => {
                 window.location.href = '/login';
             }, 2000);
         } else {
-            // Error - show error message
             showFormMessage(result.message || 'Account creation failed. Please try again.', 'error', formMessage);
         }
     } catch (error) {
         console.error('Signup error:', error);
         showFormMessage('Network error. Please check your connection and try again.', 'error', formMessage);
     } finally {
-        // Reset button state
         submitBtn.textContent = 'Create Account';
         submitBtn.disabled = false;
     }
@@ -206,76 +206,43 @@ function showFormMessage(message, type, formMessage) {
     formMessage.className = type === 'success' ? 'success-message' : 'error-message';
     formMessage.style.display = 'block';
     
-    // Scroll to message
     formMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-async function initApp() {
-    const currentPage = getCurrentPage();
-    
-    console.log('Initializing app for page:', currentPage);
-    
-    // Handle different page types
-    if (currentPage === 'login') {
-        initLoginPage();
-        return;
-    }
-    
-    if (currentPage === 'signup') {
-        initSignupPage();
-        return;
-    }
-    
-    // For all other pages (home, profile, history), check authentication
+// ===== PROTECTED PAGES INITIALIZATION =====
+async function initProtectedPage() {
     const isAuthenticated = await checkAuth();
-    if (isAuthenticated) {
-        console.log('Auth successful, initializing page');
-        init();
-    } else {
-        console.log('Auth failed, redirecting to login');
+    
+    if (!isAuthenticated) {
+        console.log('❌ Not authenticated, redirecting to login');
+        window.location.href = '/login';
+        return;
     }
+    
+    console.log('✅ User authenticated, initializing protected page');
+    init();
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+// ===== MAIN INITIALIZATION =====
+document.addEventListener("DOMContentLoaded", () => {
     const currentPage = getCurrentPage();
     
-    console.log(' Page loaded:', currentPage);
+    console.log('🚀 Initializing page:', currentPage);
     
-    if (currentPage === 'login') {
-        initLoginPage();
-    } else if (currentPage === 'signup') {
-        initSignupPage();
-    } else {
-        await initApp();
-        startSessionHeartbeat();
+    switch(currentPage) {
+        case 'login':
+            initLoginPage();
+            break;
+        case 'signup':
+            initSignupPage();
+            break;
+        default:
+            initProtectedPage();
+            break;
     }
 });
 
-function getCurrentPage() {
-    const path = window.location.pathname.toLowerCase();
-    const page = path.split('/').pop() || '';
-    
-    console.log('📍 Current path:', path, 'Page:', page);
-  
-    // Check for different pages
-    if (path === '/' || path.includes('home') || page === 'home' || page === 'home.html' || page === 'index.html') {
-        return 'home';
-    }
-    if (path.includes('login') || page === 'login' || page === 'login_page.html') {
-        return 'login';
-    }
-    if (path.includes('signup') || page === 'signup' || page === 'sign_up_page.html' || path.includes('sign_up')) {
-        return 'signup';
-    }
-    if (path.includes('history') || page === 'history' || page === 'history.html') {
-        return 'history';
-    }
-    if (path.includes('profile') || page === 'profile' || page === 'profile.html') {
-        return 'profile';
-    }
-    
-    return 'home'; // default
-}
+// ===== REST OF YOUR APPLICATION CODE =====
 
 // ELEMENTS
 let modal, newTaskBtn, closeModal, taskList, taskForm, deleteModal, confirmDeleteBtn, cancelDeleteBtn, taskDeadlineInput;
@@ -350,7 +317,6 @@ function updateWelcomeMessage(){
     
     if (welcomeElement) {
         if (currentPage === 'history') {
-            // Remove greeting for history page
             welcomeElement.textContent = 'Task History';
         } else {
             const userName = getUserName();
@@ -360,9 +326,10 @@ function updateWelcomeMessage(){
 
     if(dateTimeElement){
         updateDateTime();
-        setInterval(updateDateTime, 1000); //update every second for real time
+        setInterval(updateDateTime, 1000);
     }
 }
+
 function getUserName(){
     return localStorage.getItem('username') || 'User';
 }
@@ -371,11 +338,8 @@ function updateDateTime(){
     const dateTimeElement = document.getElementById('currentDateTime');
     if(dateTimeElement){
         const now = new Date();
-
-        // Convert to Malaysian time (UTC+8)
         const malaysiaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
 
-        // Manual formatting for Malaysian time
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         
@@ -390,7 +354,7 @@ function updateDateTime(){
         const ampm = hours >= 12 ? 'PM' : 'AM';
         
         hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
+        hours = hours ? hours : 12;
         
         const timeString = `${hours}:${minutes}:${seconds} ${ampm}`;
         const dateString = `${dayName}, ${date} ${month} ${year}`;
@@ -492,15 +456,6 @@ function handleGlobalClicks(e) {
     if (e.target === modal) closeTaskModal();
     if (e.target === mapModal) closeMapModalHandler();
     if (!e.target.closest('.input-with-button')) hideAllAutocompletes();
-}
-
-// Page detection
-function getCurrentPage() {
-    const path = window.location.pathname;
-    if (path.includes('history.html')) return 'history';
-    if (path.includes('profile.html')) return 'profile';
-    if (path.includes('home.html') || path === '/home') return 'home';
-    return 'home'; // default
 }
 
 function setMinDate() {
@@ -1793,4 +1748,3 @@ function loadProfile() {
     // Add profile loading logic here
     console.log('Loading profile...');
 }
-

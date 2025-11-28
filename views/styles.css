@@ -638,6 +638,8 @@ body {
 .input-with-button input {
     flex: 1;
     min-width: 250px;
+    position: relative;
+    z-index: 1;
 }
 
 .input-group input {
@@ -743,6 +745,10 @@ body {
     transition: max-height 0.4s ease;
 }
 
+.map-container.compact {
+    max-height: 35vh;
+}
+
 .route-map {
     width: 100%;
     height: 100%;
@@ -757,12 +763,14 @@ body {
     max-height: 20vh;
     overflow-y: auto;
     transition: all 0.3s ease;
+    border-top: 2px solid #dee2e6;
+    background: white;
 }
 
 .route-info {
     background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    padding: 15px 20px;
-    border-top: 3px solid #2e7d32;
+    padding: 25px 30px;
+    border-top: 4px solid #2e7d32;
     border-radius: 0 0 12px 12px;
     flex-shrink: 0;
     max-height: 120px;
@@ -778,54 +786,61 @@ body {
 }
 
 .route-info h3 {
-    margin-bottom: 12px;
+    margin: 0 0 20px 0 !important;
     color: #1b5e20;
-    font-size: 1.1em;
+    font-size: 1.3em !important;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 10px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .route-details {
     display: flex;
-    gap: 20px;
+    gap: 30px;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .route-detail {
     background: white;
-    padding: 12px 15px;
-    border-radius: 10px;
-    border-left: 4px solid #2e7d32;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    padding: 20px 30px !important;
+    border-radius: 12px;
+    border-left: 5px solid #2e7d32;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    min-width: 120px;
+    min-width: 150px;
 }
 
 .route-detail:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+    border-left-width: 7px;
 }
 
 .route-detail strong {
-    color: #555;
-    font-size: 0.8em;
+    color: #666;
+    font-size: 0.85em;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     font-weight: 600;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    display: block;
 }
 
 .route-detail span {
     color: #1b5e20;
     font-weight: 700;
-    font-size: 1.2em;
+    font-size: 1.8em !important;
+    line-height: 1;
 }
 
 /* ===== HISTORY PAGE SPECIFIC STYLES ===== */
@@ -1054,6 +1069,32 @@ body {
         flex-direction: column;
         align-items: stretch;
     }
+
+     .search-autocomplete {
+        right: 0; /* Full width on mobile */
+        max-height: 200px;
+    }
+    
+    .autocomplete-item {
+        padding: 10px 12px;
+    }
+    
+    .route-info {
+        padding: 20px 15px !important;
+    }
+    
+    .route-details {
+        gap: 15px;
+    }
+    
+    .route-detail {
+        padding: 15px 20px !important;
+        min-width: 120px;
+    }
+    
+    .route-detail span {
+        font-size: 1.5em !important;
+    }
 }
 
 @media (max-width: 576px) {
@@ -1119,6 +1160,29 @@ body {
     
     .no-tasks p {
         font-size: 1rem;
+    }
+
+    .autocomplete-item .name {
+        font-size: 13px;
+    }
+    
+    .autocomplete-item .address {
+        font-size: 11px;
+    }
+    
+    .route-info h3 {
+        font-size: 1.1em !important;
+    }
+    
+    .route-details {
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+    }
+    
+    .route-detail {
+        width: 100%;
+        max-width: 250px;
     }
 }
 
@@ -1556,4 +1620,58 @@ body {
     .auth-title {
         font-size: 1.5rem;
     }
+}
+
+/* Autocomplete Dropdown - INSIDE the input container */
+.search-autocomplete {
+    position: absolute;
+    top: 100%; /* Position below the input */
+    left: 0;
+    right: 60px; /* Leave space for the location button */
+    background: white;
+    border: 2px solid #2e7d32;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    display: none; /* Hidden by default */
+    margin-top: -2px; /* Overlap with input border */
+}
+
+.search-autocomplete.show {
+    display: block !important;
+}
+
+.autocomplete-item {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.autocomplete-item:hover {
+    background: #f8fff8;
+    border-left: 4px solid #2e7d32;
+    padding-left: 11px;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+    border-radius: 0 0 8px 8px;
+}
+
+.autocomplete-item .name {
+    font-weight: 600;
+    color: #2e7d32;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.autocomplete-item .address {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
 }

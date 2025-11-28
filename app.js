@@ -15,13 +15,15 @@ const OPENROUTE_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6I
 
 // MySQL pool configuration
 const db = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'erruns_db',
+  host: 'localhost',      
+  user: 'root',           
+  password: '',         
+  database: 'erruns_db',  
+  port: 3306,             
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  connectTimeout: 60000,  // increase timeout
 });
 
 // Session store configuration
