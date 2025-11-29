@@ -46,7 +46,7 @@ async function checkAuth() {
 
 // ===== LOGIN PAGE =====
 function initLoginPage() {
-    console.log('🔐 Initializing login page');
+    console.log('Initializing login page');
     const loginForm = document.getElementById("loginForm");
     const loginError = document.getElementById("loginError");
 
@@ -236,6 +236,13 @@ document.addEventListener("DOMContentLoaded", () => {
         case 'signup':
             initSignupPage();
             break;
+        case 'profile':
+            initProfilePage();
+            initClock(); // Just initialize the clock, not the welcome message
+            break;
+        case 'history':
+            initProtectedPage(); // This will call init() which calls updateWelcomeMessage()
+            break;
         default:
             initProtectedPage();
             break;
@@ -289,23 +296,29 @@ function initializeElements() {
 }
 
 // Initialize the application
+// Initialize the application
 function init() {
     const currentPage = getCurrentPage();
 
     initializeElements();
     setupEventListeners();
     setupMobileMenu();
-    updateWelcomeMessage();
-
+    
+    // Only call updateWelcomeMessage for home page, use initClock for others
     if(currentPage === 'home'){
+        updateWelcomeMessage();
         setMinDate();
-        loadTasks();
+        // Small delay to ensure DOM is fully ready
+        setTimeout(() => {
+            loadTasks();
+        }, 100);
         initMapModal();
     } else if (currentPage === 'history'){
+        updateWelcomeMessage(); // This sets "Task History" + clock
         loadHistoryStats();
         loadCompletedTasks();
-    } else if (currentPage === 'profile'){
-        loadProfile();
+    } else if (currentPage === 'profile') {
+        initClock(); // Just the clock for profile page
     }
 }
 
@@ -318,12 +331,24 @@ function updateWelcomeMessage(){
     if (welcomeElement) {
         if (currentPage === 'history') {
             welcomeElement.textContent = 'Task History';
+        } else if (currentPage === 'profile') {
+            welcomeElement.textContent = 'My Profile';
         } else {
             const userName = getUserName();
             welcomeElement.textContent = `Welcome, ${userName || 'User'}!`;
         }
     }
 
+    // Initialize clock if the element exists
+    if(dateTimeElement){
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    }
+}
+
+// Separate function just for initializing the clock
+function initClock() {
+    const dateTimeElement = document.getElementById('currentDateTime');
     if(dateTimeElement){
         updateDateTime();
         setInterval(updateDateTime, 1000);
@@ -472,16 +497,21 @@ function setMinDate() {
 
 async function loadTasks() {
     try {
+        console.log('📋 Loading tasks from server...');
+        
         const res = await fetch("/tasks", {
             credentials: 'include'
         });
         
         if (res.status === 401) {
+            console.log('Unauthorized, redirecting to login');
             window.location.href = '/login';
             return;
         }
         
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
         
         const tasks = await res.json();
         
@@ -489,25 +519,59 @@ async function loadTasks() {
         const incompleteTasks = tasks.filter(task => task.complete === 0);
         currentTasks = incompleteTasks;
         
-        console.log('Loaded incomplete tasks:', incompleteTasks);
+        console.log('📋 Loaded incomplete tasks:', incompleteTasks.length, incompleteTasks);
         renderTasks(incompleteTasks);
+        
     } catch (err) {
         console.error("Failed to load tasks:", err);
         showNotification('Failed to load tasks: ' + err.message, 'error');
+        // Render empty state on error too
+        renderTasks([]);
     }
 }
 
 function renderTasks(tasks) {
-    if (!taskList) return;
+    console.log('📋 Rendering tasks:', tasks); // Debug log
+    
+    if (!taskList) {
+        console.error('taskList element not found!');
+        // Try to find it again
+        taskList = document.getElementById("taskList");
+        if (!taskList) {
+            console.error('Still cannot find taskList element!');
+            return;
+        }
+    }
     
     taskList.innerHTML = "";
     
-    if (!tasks || tasks.length === 0) {
-        taskList.innerHTML = '<div class="no-tasks">No tasks yet. Create your first task!</div>';
+    // Ensure tasks is always treated as an array
+    const tasksToRender = Array.isArray(tasks) ? tasks : [];
+    
+    console.log('Tasks to render:', tasksToRender.length, tasksToRender);
+    
+    if (tasksToRender.length === 0) {
+        console.log(' No tasks to display, showing empty state');
+        taskList.innerHTML = `
+            <div class="no-tasks">
+                <div style="text-align: center; padding: 3rem;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">📋</div>
+                    <h3 style="color: #666; margin-bottom: 0.5rem;">No Tasks Yet</h3>
+                    <p style="color: #888;">You don't have any tasks at the moment.</p>
+                    <p style="color: #888; margin-bottom: 1rem;">Create your first task to get started!</p>
+                    <button onclick="openNewTaskModal()" 
+                            style="padding: 10px 20px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                        + Create Your First Task
+                    </button>
+                </div>
+            </div>
+        `;
         return;
     }
     
-    tasks.forEach(task => {
+    console.log('Rendering', tasksToRender.length, 'tasks');
+    
+    tasksToRender.forEach(task => {
         const priority = task.priority ? String(task.priority).toLowerCase() : 'medium';
         
         // Check if coordinates exist for route
@@ -1212,13 +1276,25 @@ async function reverseGeocode(lat, lon) {
 function openNewTaskModal() {
     if (!taskForm || !modal) return;
     
+    // Reset the form completely
     taskForm.reset();
+    
+    // Clear any hidden task ID
+    const taskIdInput = document.getElementById("taskId");
+    if (taskIdInput) {
+        taskIdInput.value = "";
+    }
+    
     setMinDate();
-    modal.classList.add("show");
+    
+    // Update modal title
     const headerTitle = modal.querySelector(".modal-header h2");
     if (headerTitle) headerTitle.textContent = "Add Task";
-    const hiddenId = document.getElementById("taskId");
-    if (hiddenId) hiddenId.value = "";
+    
+    // Show modal
+    modal.classList.add("show");
+    
+    console.log('📝 Opened new task modal');
 }
 
 function closeTaskModal() {
@@ -1227,8 +1303,14 @@ function closeTaskModal() {
 
 async function handleTaskSubmit(e) {
     e.preventDefault();
-    const submitButton = document.querySelector('.save-btn');
-    if (!submitButton) return;
+    
+    // Find the submit button correctly
+    const submitButton = taskForm.querySelector('button[type="submit"]');
+    if (!submitButton) {
+        console.error('❌ Submit button not found!');
+        showNotification('Error: Could not find submit button', 'error');
+        return;
+    }
     
     const originalText = submitButton.textContent;
     submitButton.textContent = 'Saving...';
@@ -1238,20 +1320,39 @@ async function handleTaskSubmit(e) {
         const formData = new FormData(taskForm);
         const data = Object.fromEntries(formData.entries());
         
+        console.log('📝 Form data:', data);
+        
+        // Validate required fields
         if (!data.title || !data.category || !data.origin || !data.destination || !data.deadline) {
-            alert("Please fill out all required fields");
+            showNotification('Please fill out all required fields', 'error');
             return;
         }
 
-        data.complete = 0;
-        const url = data.taskId ? `/tasks/${data.taskId}` : "/add-task";
-        const method = data.taskId ? "PUT" : "POST";
+        // Prepare the request data
+        const requestData = {
+            title: data.title,
+            category: data.category,
+            remarks: data.remarks || '',
+            origin: data.origin,
+            destination: data.destination,
+            deadline: data.deadline,
+            complete: 0
+        };
+
+        console.log('Sending task data:', requestData);
+
+        // Determine if this is a new task or edit
+        const isEdit = data.taskId && data.taskId !== '';
+        const url = isEdit ? `/tasks/${data.taskId}` : "/tasks";
+        const method = isEdit ? "PUT" : "POST";
+
+        console.log(`📝 ${isEdit ? 'Editing' : 'Creating'} task:`, url, method);
 
         const res = await fetch(url, {
             method,
             headers: { "Content-Type": "application/json" },
             credentials: 'include',
-            body: JSON.stringify(data),
+            body: JSON.stringify(requestData),
         });
 
         if (res.status === 401) {
@@ -1259,16 +1360,27 @@ async function handleTaskSubmit(e) {
             return;
         }
 
-        if (!res.ok) throw new Error(`Server error (${res.status})`);
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error('❌ Server error:', res.status, errorText);
+            throw new Error(`Server error (${res.status}): ${errorText}`);
+        }
 
+        const result = await res.json();
+        console.log('✅ Task save response:', result);
+
+        // Close modal and reset form
         if (modal) modal.classList.remove("show");
         if (taskForm) taskForm.reset();
+        
+        // Reload tasks
         await loadTasks();
-        showNotification('Task saved successfully!', 'success');
+        
+        showNotification(isEdit ? 'Task updated successfully!' : 'Task created successfully!', 'success');
 
     } catch (err) {
         console.error("Error saving task:", err);
-        showNotification('Error: ' + err.message, 'error');
+        showNotification('Error saving task: ' + err.message, 'error');
     } finally {
         submitButton.textContent = originalText;
         submitButton.disabled = false;
@@ -1316,12 +1428,14 @@ function handleTaskActions(e) {
         taskToDelete = id;
         if (deleteModal) deleteModal.classList.add("show");
     }
-    else if (e.target.classList.contains("edit-btn")) {
+   else if (e.target.classList.contains("edit-btn")) {
         const task = currentTasks.find(t => t.id === id);
         if (!task) {
-            alert("Task not found");
+            showNotification('Task not found', 'error');
             return;
         }
+
+        console.log('📝 Editing task:', task);
 
         const taskId = document.getElementById("taskId");
         const taskTitle = document.getElementById("taskTitle");
@@ -1331,6 +1445,7 @@ function handleTaskActions(e) {
         const taskDestination = document.getElementById("taskDestination");
         const taskDeadline = document.getElementById("taskDeadline");
 
+        // Set form values
         if (taskId) taskId.value = task.id;
         if (taskTitle) taskTitle.value = task.title || "";
         if (taskCategory) taskCategory.value = task.category || "";
@@ -1344,6 +1459,8 @@ function handleTaskActions(e) {
         
         const headerTitle = modal.querySelector(".modal-header h2");
         if (headerTitle) headerTitle.textContent = "Edit Task";
+        
+        console.log('📝 Form populated for editing');
     }
     else if (e.target.classList.contains("complete-btn")) {
         completeTask(id, e.target);
@@ -1743,8 +1860,151 @@ function setupLogout() {
     }
 }
 
-// Profile page function (placeholder)
-function loadProfile() {
-    // Add profile loading logic here
-    console.log('Loading profile...');
+// ===== PROFILE PAGE FUNCTIONS =====
+function initProfilePage() {
+    console.log('Initializing profile page');
+    loadProfile();
+    setupProfileEventListeners();
+    setupMobileMenu(); 
+}
+
+async function loadProfile() {
+    try {
+        const res = await fetch("/api/profile", {
+            credentials: 'include'
+        });
+        
+        if (res.status === 401) {
+            window.location.href = '/login';
+            return;
+        }
+        
+        const data = await res.json();
+        if (res.ok) {
+            document.getElementById("first_name").value = data.first_name || '';
+            document.getElementById("last_name").value = data.last_name || '';
+            document.getElementById("email").value = data.email || '';
+            document.getElementById("username").value = data.username || '';
+        } else {
+            showMessage(data.error || "Failed to load profile.", "error");
+        }
+    } catch (err) {
+        console.error("Error loading profile:", err);
+        showMessage("Error loading profile.", "error");
+    }
+}
+
+function setupProfileEventListeners() {
+    const profileForm = document.getElementById("profileForm");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const cancelDeleteAccountBtn = document.getElementById("cancelDeleteAccountBtn");
+    const confirmDeleteAccountBtn = document.getElementById("confirmDeleteAccountBtn");
+
+    if (profileForm) {
+        profileForm.addEventListener("submit", handleProfileSubmit);
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.addEventListener("click", () => {
+            const deleteAccountModal = document.getElementById("deleteAccountModal");
+            if (deleteAccountModal) deleteAccountModal.classList.add("show");
+        });
+    }
+    
+    if (cancelDeleteAccountBtn) {
+        cancelDeleteAccountBtn.addEventListener("click", () => {
+            const deleteAccountModal = document.getElementById("deleteAccountModal");
+            if (deleteAccountModal) deleteAccountModal.classList.remove("show");
+        });
+    }
+    
+    if (confirmDeleteAccountBtn) {
+        confirmDeleteAccountBtn.addEventListener("click", handleAccountDeletion);
+    }
+}
+
+async function handleProfileSubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Check if passwords match
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+    
+    if (password && password !== confirmPassword) {
+        showMessage("Passwords do not match.", "error");
+        return;
+    }
+    
+    // Remove confirmPassword from data before sending
+    delete data.confirmPassword;
+    
+    // If password is empty, remove it from data
+    if (!password) {
+        delete data.password;
+    }
+
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    
+    try {
+        submitButton.textContent = 'Saving...';
+        submitButton.disabled = true;
+
+        const res = await fetch("/api/profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: 'include',
+            body: JSON.stringify(data),
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+            showMessage("✅ Profile updated successfully.", "success");
+        } else {
+            showMessage(result.error || "Update failed.", "error");
+        }
+    } catch (err) {
+        console.error("Error updating profile:", err);
+        showMessage("Error updating profile.", "error");
+    } finally {
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
+    }
+}
+
+async function handleAccountDeletion() {
+    try {
+        const res = await fetch("/api/profile", { 
+            method: "DELETE",
+            credentials: 'include'
+        });
+        
+        if (res.ok) {
+            alert("Account deleted successfully.");
+            window.location.href = "/signup";
+        } else {
+            alert("Failed to delete account.");
+        }
+    } catch (err) {
+        console.error("Error deleting account:", err);
+        alert("Error deleting account.");
+    }
+}
+
+function showMessage(text, type) {
+    const messageEl = document.getElementById("message");
+    if (!messageEl) return;
+    
+    messageEl.textContent = text;
+    messageEl.className = `message ${type}`;
+    
+    // Auto-hide success messages after 3 seconds
+    if (type === "success") {
+        setTimeout(() => {
+            messageEl.textContent = "";
+            messageEl.className = "message";
+        }, 3000);
+    }
 }

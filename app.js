@@ -23,14 +23,14 @@ const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 60000,  // increase timeout
+  connectTimeout: 60000,
 });
 
 // Session store configuration
 const sessionStore = new MySQLStore({
   clearExpired: true,
-  checkExpirationInterval: 900000, // 15 minutes
-  expiration: 86400000, // 24 hours
+  checkExpirationInterval: 900000,
+  expiration: 86400000,
   createDatabaseTable: true,
   schema: {
     tableName: 'sessions',
@@ -48,10 +48,10 @@ app.use(session({
   secret: 'secret_session',
   store: sessionStore,
   resave: false,
-  saveUninitialized: false, // This should be false
+  saveUninitialized: false,
   cookie: {
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: false, // Set to true in production with HTTPS
+    maxAge: 24 * 60 * 60 * 1000,
+    secure: false,
     httpOnly: true,
     sameSite: 'lax'
   },
@@ -62,8 +62,6 @@ app.use(session({
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.json());
-
-// Serve static files
 app.use(express.static(path.join(__dirname, "views")));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -143,7 +141,6 @@ app.get("/signup", (req, res) => {
 app.post("/signup", (req, res) => {
   const { first_name, last_name, email, username, password } = req.body;
 
-  // Check if user already exists
   db.query(
     "SELECT user_id FROM users WHERE username = ? OR email = ?",
     [username, email],
@@ -194,7 +191,6 @@ app.post("/login", (req, res) => {
 
     const user = results[0];
     if (bcrypt.compareSync(password, user.password)) {
-      // Set session with user data (excluding password)
       req.session.user = {
         user_id: user.user_id,
         username: user.username,
@@ -203,7 +199,6 @@ app.post("/login", (req, res) => {
         last_name: user.last_name
       };
 
-      // Explicitly save session
       req.session.save((err) => {
         if (err) {
           console.error("Session save error:", err);
@@ -272,7 +267,6 @@ app.put("/api/profile", requireAuth, (req, res) => {
       return res.status(500).json({ error: "Database error" });
     }
     
-    // Update session data
     req.session.user.first_name = first_name;
     req.session.user.last_name = last_name;
     req.session.user.email = email;
@@ -304,7 +298,7 @@ app.get('/home', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "views", "home.html"));
 });
 
-// Task routes
+// Task routes - UPDATED TO USE destination INSTEAD OF location
 app.get('/tasks', requireAuth, (req, res) => {
   const sql = `
     SELECT 
@@ -313,7 +307,7 @@ app.get('/tasks', requireAuth, (req, res) => {
       category, 
       remarks, 
       origin, 
-      location AS location,
+      destination,  -- CHANGED FROM location
       deadline, 
       priority, 
       complete,
@@ -324,7 +318,7 @@ app.get('/tasks', requireAuth, (req, res) => {
       route_distance,
       route_duration
     FROM tasks
-    WHERE user_id = ? AND complete = 0  -- Only get incomplete tasks
+    WHERE user_id = ? AND complete = 0
   `;
   
   db.query(sql, [req.session.user.user_id], (err, results) => {
@@ -338,9 +332,9 @@ app.get('/tasks', requireAuth, (req, res) => {
   });
 });
 
-app.post('/add-task', requireAuth, async (req, res) => {
+app.post('/tasks', requireAuth, async (req, res) => {
   try {
-    const { title, category, remarks, origin, location, deadline } = req.body;
+    const { title, category, remarks, origin, destination, deadline } = req.body; // CHANGED: destination instead of location
 
     console.log('📝 Add Task Request from user:', req.session.user.username);
 
@@ -364,7 +358,6 @@ app.post('/add-task', requireAuth, async (req, res) => {
     } catch (mlErr) {
       console.warn("⚠️ ML Server not reachable, using fallback");
       
-      // Simple fallback based on deadline only
       if (hoursUntilDeadline < 24) {
         predictedPriority = "High";
       } else if (hoursUntilDeadline < 72) {
@@ -374,10 +367,10 @@ app.post('/add-task', requireAuth, async (req, res) => {
       }
     }
 
-    // Insert into DB
+    // Insert into DB - CHANGED TO destination
     db.query(
       `INSERT INTO tasks 
-       (user_id, title, category, remarks, origin, location, deadline, priority, complete) 
+       (user_id, title, category, remarks, origin, destination, deadline, priority, complete) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.session.user.user_id,
@@ -385,7 +378,7 @@ app.post('/add-task', requireAuth, async (req, res) => {
         category,
         remarks,
         origin,
-        location || "",
+        destination || "", // CHANGED TO destination
         deadline,
         predictedPriority,
         0
@@ -409,16 +402,14 @@ app.post('/add-task', requireAuth, async (req, res) => {
   }
 });
 
-//Task Completion
+// Task Completion - UPDATED TO destination
 app.put('/tasks/:id', requireAuth, async (req, res) => {
   try {
-    const { title, category, remarks, origin, location, deadline, complete, completedAt } = req.body;
+    const { title, category, remarks, origin, destination, deadline, complete, completedAt } = req.body; // CHANGED
 
     console.log('📝 PUT /tasks/:id - Body:', req.body);
     console.log('📝 Task ID:', req.params.id, 'Complete:', complete);
 
-  
-        // Handle task completion
     if (complete === 1) {
       console.log('✅ Marking task as complete:', req.params.id);
       
@@ -453,10 +444,8 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
       return;
     }
 
-    // Handle task editing (only if complete is not 1)
     console.log('📝 Editing task:', req.params.id);
     
-    // Calculate hours until deadline
     const now = new Date();
     const deadlineDate = new Date(deadline);
     const timeDiff = deadlineDate.getTime() - now.getTime();
@@ -485,17 +474,17 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
       }
     }
 
-    // Update task for editing
+    // Update task - CHANGED TO destination
     db.query(
       `UPDATE tasks 
-       SET title=?, category=?, remarks=?, origin=?, location=?, deadline=?, priority=?
+       SET title=?, category=?, remarks=?, origin=?, destination=?, deadline=?, priority=?
        WHERE task_id=? AND user_id=?`,
       [
         title,
         category,
         remarks,
         origin,
-        location || "",
+        destination || "", // CHANGED TO destination
         deadline,
         predictedPriority,
         req.params.id,
@@ -538,10 +527,10 @@ app.delete('/tasks/:id', requireAuth, (req, res) => {
   );
 });
 
-// Route management - FIXED: Remove duplicate route and use location AS location
+// Route management - UPDATED TO destination
 app.get('/tasks/:id/route', requireAuth, (req, res) => {
     const sql = `
-        SELECT origin, location AS location, 
+        SELECT origin, destination,  -- CHANGED FROM location
                origin_lat, origin_lon,
                dest_lat, dest_lon,
                route_distance, route_duration
@@ -568,13 +557,12 @@ app.get('/tasks/:id/route', requireAuth, (req, res) => {
     });
 });
 
-// ADD THIS MISSING ROUTE FOR SAVING ROUTES
+// Save route - unchanged
 app.post('/tasks/:id/route', requireAuth, (req, res) => {
     console.log('POST /tasks/:id/route called by user:', req.session.user.username);
 
     const { originLat, originLon, destLat, destLon, distance, duration } = req.body;
     
-    // Validate coordinates
     if (!originLat || !originLon || !destLat || !destLon) {
         return res.status(400).json({ error: "Missing coordinates" });
     }
@@ -610,20 +598,20 @@ app.post('/tasks/:id/route', requireAuth, (req, res) => {
     );
 });
 
-// API routes
+// API routes - UPDATED TO destination
 app.post('/api/directions', requireAuth, async (req, res) => {
   try {
-    const { origin, location, profile = 'driving-car' } = req.body;
+    const { origin, destination, profile = 'driving-car' } = req.body; // CHANGED
     
-    if (!origin || !location) {
-      return res.status(400).json({ error: "Origin and location required" });
+    if (!origin || !destination) {
+      return res.status(400).json({ error: "Origin and destination required" });
     }
 
     res.json({
       success: true,
       message: "Directions service - coordinates needed for routing",
       origin: origin,
-      location: location
+      destination: destination // CHANGED
     });
 
   } catch (error) {
@@ -650,9 +638,9 @@ app.get('/api/user-location', requireAuth, async (req, res) => {
 app.get('/api/optimized-route', requireAuth, async (req, res) => {
   try{
     const sql = `
-      SELECT task_id, title, origin, location, priority
+      SELECT task_id, title, origin, destination, priority  -- CHANGED
       FROM tasks
-      WHERE user_id = ? AND complete = 0`;  // Only incomplete tasks
+      WHERE user_id = ? AND complete = 0`;
 
     db.query(sql, [req.session.user.user_id], async (err, results) => {
       if(err){
@@ -667,7 +655,7 @@ app.get('/api/optimized-route', requireAuth, async (req, res) => {
       const locations = results.map(task => ({
         id: task.task_id,
         title: task.title,
-        address: task.location,
+        address: task.destination, // CHANGED
         priority: task.priority
       }));
 
@@ -714,7 +702,6 @@ app.post("/api/predict-priority", requireAuth, async (req, res) => {
     } catch (mlError) {
       console.error('⚠️ ML Server Error:', mlError.message);
       
-      // Fallback priority logic
       let fallbackPriority = "Medium";
       if (hours < 24) {
         fallbackPriority = "High";
@@ -744,8 +731,7 @@ app.get("/history", requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "views", "history.html"));
 });
 
-// Get completed tasks for history page
-
+// Get completed tasks - UPDATED TO destination
 app.get('/api/completed-tasks', requireAuth, (req, res) => {
   const sql = `
     SELECT 
@@ -754,7 +740,7 @@ app.get('/api/completed-tasks', requireAuth, (req, res) => {
       category, 
       remarks, 
       origin, 
-      location AS destination,
+      destination,  -- CHANGED
       deadline, 
       priority, 
       complete,

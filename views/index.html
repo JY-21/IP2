@@ -1,77 +1,191 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>ErRuns</title>
-        <meta charset="utf-8">
-    </head>
+<html lang="en">
+<head>
+    <title>ErRuns - Your Personal Task & Route Manager</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <header class="index-header">
+        <nav class="index-nav">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <img src="ErRuns Logo 2.png" alt="ErRuns Logo" class="logo">
+                    
+                </div>
+                <div class="nav-actions">
+                    <a href="/login" class="nav-btn login-btn">Login</a>
+                    <a href="/signup" class="nav-btn signup-btn">Sign Up</a>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-    <body>
-        <p>Work In Progress</p>
-    </body>
-</html><!DOCTYPE html>
-<html>
-    <head>
-        <title>ErRun - Errand Management Made Easy</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-        <link rel="stylesheet" href="index-styles.css">
-    </head>
-    <body>
-        <div class="landing-container">
-            <nav class="landing-nav">
-                <div class="logo">
-                    <img src="ErRuns logo.png" alt="ErRun Logo" class="logo-img">
-                    <span class="logo-text">ErRun</span>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Simplify Your Daily 
+                    <span class="highlight">Errands & Tasks</span>
+                </h1>
+                <p class="hero-description">
+                    ErRuns helps you organize, prioritize, and optimize your daily tasks with intelligent route planning. 
+                    From groceries to deliveries, we make managing your errands effortless and efficient.
+                </p>
+                <div class="hero-actions">
+                    <a href="/signup" class="cta-btn primary">Get Started Free</a>
+                    <a href="/login" class="cta-btn secondary">Already have an account?</a>
                 </div>
-                <div class="nav-buttons">
-                    <a href="login.html" class="nav-btn login-btn">Login</a>
-                    <a href="signup.html" class="nav-btn signup-btn">Sign Up</a>
-                </div>
-            </nav>
-
-            <section class="hero">
-                <div class="hero-content">
-                    <h1>Manage Your Errands<br>Smarter, Faster</h1>
-                    <p class="hero-subtitle">AI-powered task prioritization and intelligent route planning to save you time and effort</p>
-                    <div class="hero-buttons">
-                        <a href="signup.html" class="btn-primary">Get Started Free</a>
-                        <a href="#features" class="btn-secondary">Learn More</a>
+            </div>
+            <div class="hero-visual">
+                <div class="feature-preview">
+                    <div class="preview-card task-card">
+                        <div class="card-header">
+                            <span class="card-icon">📋</span>
+                            <span class="card-title">Task Management</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="task-item">
+                                <span class="task-text">Buy groceries</span>
+                                <span class="task-priority high">High</span>
+                            </div>
+                            <div class="task-item">
+                                <span class="task-text">Pay electricity bill</span>
+                                <span class="task-priority medium">Medium</span>
+                            </div>
+                            <div class="task-item">
+                                <span class="task-text">Package delivery</span>
+                                <span class="task-priority low">Low</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="preview-card route-card">
+                        <div class="card-header">
+                            <span class="card-icon">🗺️</span>
+                            <span class="card-title">Route Planning</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="route-info">
+                                <span class="route-detail">📍 Home → 🛒 Market</span>
+                                <span class="route-distance">2.3 km • 8 min</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="hero-image">
-                    <img src="/hero-illustration.png" alt="ErRun App Illustration">
-                </div>
-            </section>
-
-            <section id="features" class="features">
-                <h2>Why Choose ErRun?</h2>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">🤖</div>
-                        <h3>AI Task Prioritization</h3>
-                        <p>Machine learning algorithms automatically prioritize your tasks based on urgency, deadline, and category</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🗺️</div>
-                        <h3>Smart Route Planning</h3>
-                        <p>Generate optimal routes to multiple destinations and save time on your errands</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">📊</div>
-                        <h3>Task Analytics</h3>
-                        <p>Track your productivity with detailed history and insights into completed tasks</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Quick & Easy</h3>
-                        <p>Simple interface that gets out of your way and lets you focus on getting things done</p>
-                    </div>
-                </div>
-            </section>
-
-            <footer class="landing-footer">
-                <p>&copy; 2024 ErRun. All rights reserved.</p>
-            </footer>
+            </div>
         </div>
-    </body>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <h2 class="section-title">Why Choose ErRuns?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">Smart Priority</h3>
+                    <p class="feature-description">
+                        AI-powered task prioritization based on deadlines and category. 
+                        Never miss urgent errands again.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🗺️</div>
+                    <h3 class="feature-title">Route Optimization</h3>
+                    <p class="feature-description">
+                        Plan the most efficient routes for your errands. Save time and fuel with intelligent pathfinding.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">Progress Tracking</h3>
+                    <p class="feature-description">
+                        Monitor your task completion history and improve your productivity over time.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3 class="feature-title">Mobile Friendly</h3>
+                    <p class="feature-description">
+                        Access your tasks and routes anywhere, anytime. Fully responsive design for all devices.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">How ErRuns Works</h2>
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Create Tasks</h3>
+                        <p>Add your errands with details like category, deadline, and locations</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Set Priorities</h3>
+                        <p>Let our AI automatically prioritize tasks based on urgency and importance</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Plan Routes</h3>
+                        <p>Generate optimized routes between locations to save time and effort</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Get Things Done</h3>
+                        <p>Complete tasks efficiently and track your progress over time</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Simplify Your Errands?</h2>
+                <p>Join thousands of users who are already managing their tasks efficiently with ErRuns</p>
+                <div class="cta-actions">
+                    <a href="/signup" class="cta-btn primary large">Start Your Free Account</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="index-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="ErRuns Logo 2.png" alt="ErRuns Logo" class="footer-logo">
+                    <span class="footer-text">ErRuns - Your Personal Task & Route Manager</span>
+                </div>
+                <div class="footer-links">
+                    <a href="/login" class="footer-link">Login</a>
+                    <a href="/signup" class="footer-link">Sign Up</a>
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                    <a href="#" class="footer-link">Terms of Service</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 ErRuns. All rights reserved. Making errands effortless.</p>
+            </div>
+        </div>
+    </footer>
+</body>
 </html>
