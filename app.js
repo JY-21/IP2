@@ -484,7 +484,7 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
         category,
         remarks,
         origin,
-        destination || "", // CHANGED TO destination
+        destination || "", 
         deadline,
         predictedPriority,
         req.params.id,

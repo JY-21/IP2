@@ -2089,3 +2089,52 @@ body {
     display: inline-block;
     width: fit-content;
 }
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateX(150%);
+    transition: transform 0.3s ease;
+    max-width: 350px;
+    word-wrap: break-word;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    border-left: 4px solid #1e7e34;
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border-left: 4px solid #bd2130;
+}
+
+.notification.info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    border-left: 4px solid #117a8b;
+}
+
+/* Add emoji to notifications */
+.notification.success::before {
+    content: "✅ ";
+}
+
+.notification.error::before {
+    content: "❌ ";
+}
+
+.notification.info::before {
+    content: "ℹ️ ";
+}

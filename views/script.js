@@ -1241,7 +1241,7 @@ async function saveRouteHandler() {
         console.log('Server response:', result);
         
         if (res.ok && result.success) {
-            showNotification(' Route saved successfully!', 'success');
+            showNotification('✅ Route saved successfully!', 'success');
             closeMapModalHandler();
             await loadTasks(); // Reload tasks to get updated route info
         } else {
@@ -1249,7 +1249,7 @@ async function saveRouteHandler() {
         }
     } catch (error) {
         console.error(' Save route error:', error);
-        showNotification(`Failed to save route: ${error.message}`, 'error');
+        showNotification(`❌ Failed to save route: ${error.message}`, 'error');
     }
 }
 
@@ -1307,7 +1307,7 @@ async function handleTaskSubmit(e) {
     // Find the submit button correctly
     const submitButton = taskForm.querySelector('button[type="submit"]');
     if (!submitButton) {
-        console.error('❌ Submit button not found!');
+        console.error('Submit button not found!');
         showNotification('Error: Could not find submit button', 'error');
         return;
     }
@@ -1320,7 +1320,7 @@ async function handleTaskSubmit(e) {
         const formData = new FormData(taskForm);
         const data = Object.fromEntries(formData.entries());
         
-        console.log('📝 Form data:', data);
+        console.log('Form data:', data);
         
         // Validate required fields
         if (!data.title || !data.category || !data.origin || !data.destination || !data.deadline) {
@@ -1346,7 +1346,7 @@ async function handleTaskSubmit(e) {
         const url = isEdit ? `/tasks/${data.taskId}` : "/tasks";
         const method = isEdit ? "PUT" : "POST";
 
-        console.log(`📝 ${isEdit ? 'Editing' : 'Creating'} task:`, url, method);
+        console.log(` ${isEdit ? 'Editing' : 'Creating'} task:`, url, method);
 
         const res = await fetch(url, {
             method,
@@ -1362,7 +1362,7 @@ async function handleTaskSubmit(e) {
 
         if (!res.ok) {
             const errorText = await res.text();
-            console.error('❌ Server error:', res.status, errorText);
+            console.error('Server error:', res.status, errorText);
             throw new Error(`Server error (${res.status}): ${errorText}`);
         }
 
@@ -1376,11 +1376,13 @@ async function handleTaskSubmit(e) {
         // Reload tasks
         await loadTasks();
         
-        showNotification(isEdit ? 'Task updated successfully!' : 'Task created successfully!', 'success');
+        // SUCCESS MESSAGE for add/edit
+        const successMessage = isEdit ? '✅ Task updated successfully!' : '✅ Task created successfully!';
+        showNotification(successMessage, 'success');
 
     } catch (err) {
         console.error("Error saving task:", err);
-        showNotification('Error saving task: ' + err.message, 'error');
+        showNotification('❌ Error saving task: ' + err.message, 'error');
     } finally {
         submitButton.textContent = originalText;
         submitButton.disabled = false;
@@ -1405,12 +1407,16 @@ function confirmDelete() {
             
             if (!res.ok) throw new Error("Failed to delete task");
             if (deleteModal) deleteModal.classList.remove("show");
+            
+            // SUCCESS MESSAGE for delete
+            showNotification('🗑️ Task deleted successfully!', 'success');
+            
             taskToDelete = null;
             await loadTasks();
-            showNotification('Task deleted!', 'success');
+            
         } catch (err) {
             console.error("Error deleting task:", err);
-            showNotification('Error deleting: ' + err.message, 'error');
+            showNotification('❌ Error deleting task: ' + err.message, 'error');
         }
     })();
 }
@@ -1500,7 +1506,7 @@ async function completeTask(taskId, buttonElement) {
         
         // Send completion request to backend
         const now = new Date().toISOString();
-        console.log('🔄 Completing task:', taskId, 'at:', now);
+        console.log('Completing task:', taskId, 'at:', now);
         
         const res = await fetch(`/tasks/${taskId}`, { 
             method: 'PUT',
@@ -1540,7 +1546,8 @@ async function completeTask(taskId, buttonElement) {
                 taskBar.remove();
             }
             
-            showNotification(' Task completed! Check Task History.', 'success');
+            // SUCCESS MESSAGE for complete
+            showNotification('✅ Task marked as complete! Check Task History.', 'success');
             
             // Update task list if empty
             if (currentTasks.length === 0 && taskList) {
@@ -1564,7 +1571,7 @@ async function completeTask(taskId, buttonElement) {
             taskBar.style.padding = '';
         }
         
-        showNotification('Failed to complete task: ' + err.message, 'error');
+        showNotification('❌ Failed to complete task: ' + err.message, 'error');
     }
 }
 
@@ -1811,7 +1818,8 @@ async function deleteCompletedTask(taskId) {
         
         if (!response.ok) throw new Error("Failed to delete task");
         
-        showNotification(' Task deleted permanently!', 'success');
+        // SUCCESS MESSAGE for delete from history
+        showNotification('🗑️ Completed task deleted permanently!', 'success');
         
         // Reload both tasks and stats
         await Promise.all([
@@ -1821,7 +1829,7 @@ async function deleteCompletedTask(taskId) {
         
     } catch (err) {
         console.error("Error deleting task:", err);
-        showNotification('Error deleting task: ' + err.message, 'error');
+        showNotification('❌ Error deleting task: ' + err.message, 'error');
     }
 }
 
